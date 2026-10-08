@@ -93,9 +93,11 @@ jobs:
           if (-not (Test-Path $iscc)) {
             choco install innosetup -y --no-progress | Out-Null
           }
-          & $iscc /Q "/DAppVersion=${{ steps.ver.outputs.name }}" "/DSourceDir=..\dist\EveryVideo" "/O..\dist" installer\EveryVideo.iss
+          $dist = Join-Path $PWD "dist"
+          & $iscc /Q "/DAppVersion=${{ steps.ver.outputs.name }}" "/DSourceDir=$dist\EveryVideo" "/O$dist" installer\EveryVideo.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem dist
+          if (-not (Get-ChildItem "$dist\*-setup.exe")) { Write-Error "setup.exe was not created"; exit 1 }
 
       - uses: actions/upload-artifact@v4
         with:
