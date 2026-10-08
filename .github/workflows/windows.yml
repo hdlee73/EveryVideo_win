@@ -70,13 +70,15 @@ jobs:
       - name: Smoke test (starts and stays up)
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "dist\EveryVideo\EveryVideo.exe" -PassThru
+          # 시험용 동영상을 만들어 실제로 재생해 본다.
+          & "dist\EveryVideo\ffmpeg\ffmpeg.exe" -hide_banner -loglevel error -y -f lavfi -i testsrc=d=20:s=1280x720:r=30 -f lavfi -i sine=d=20 -c:v libx264 -c:a aac -shortest "$env:RUNNER_TEMP\test.mp4"
+          $p = Start-Process -FilePath "dist\EveryVideo\EveryVideo.exe" -ArgumentList "`"$env:RUNNER_TEMP\test.mp4`"" -PassThru
           Start-Sleep -Seconds 15
           $log = Join-Path $env:APPDATA "EveryVideo\log.txt"
           if (Test-Path $log) { Get-Content $log }
           if ($p.HasExited) { Write-Error "EveryVideo exited early (code $($p.ExitCode))"; exit 1 }
           Stop-Process -Id $p.Id -Force
-          if ((Test-Path $log) -and (Select-String -Path $log -Pattern "unhandled|libvlc init" -Quiet)) {
+          if ((Test-Path $log) -and (Select-String -Path $log -Pattern "unhandled|libvlc init|video host|play error" -Quiet)) {
             Write-Error "EveryVideo logged a startup error"; exit 1
           }
 

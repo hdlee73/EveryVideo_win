@@ -1,0 +1,14 @@
+<local:CardWindow x:Class="EveryVideo.Dialogs.ProgressWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:EveryVideo"
+                  Title="작업 중" CardIcon="{StaticResource IcSave}">
+    <StackPanel Width="380">
+        <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{StaticResource TextDim}" />
+        <ProgressBar x:Name="Progress" Margin="0,14,0,0" Maximum="1" />
+        <TextBlock x:Name="ErrorText" Foreground="{StaticResource Danger}" Margin="0,8,0,0" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button x:Name="CancelButton" Content="취소" Style="{StaticResource TextButton}" Click="Cancel_Click" />
+        </StackPanel>
+    </StackPanel>
+</local:CardWindow>

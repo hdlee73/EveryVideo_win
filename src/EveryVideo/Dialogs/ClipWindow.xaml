@@ -28,14 +28,47 @@
         </Grid>
         <TextBlock x:Name="LengthText" Foreground="{StaticResource TextDim}" Margin="0,6,0,0" FontSize="12" />
 
-        <TextBlock Text="저장 방식" Style="{StaticResource Label}" />
-        <WrapPanel>
-            <RadioButton x:Name="FastRadio" Content="빠르게 (원본 그대로)" IsChecked="True" GroupName="mode" />
-            <RadioButton x:Name="AccurateRadio" Content="정확하게 (다시 인코딩)" GroupName="mode" />
-        </WrapPanel>
-        <TextBlock Text="빠르게 저장하면 시작 위치가 가까운 키프레임으로 조금 당겨질 수 있습니다. 실패하면 자동으로 다시 인코딩합니다."
-                   TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" />
-        <CheckBox x:Name="AudioCheck" Content="소리 포함" IsChecked="True" Margin="0,10,0,0" />
+        <StackPanel x:Name="ClipPanel">
+            <TextBlock Text="저장 방식" Style="{StaticResource Label}" />
+            <WrapPanel>
+                <RadioButton x:Name="AccurateRadio" Content="정확하게 (다시 인코딩)" IsChecked="True" GroupName="mode" />
+                <RadioButton x:Name="FastRadio" Content="빠르게 (원본 그대로)" GroupName="mode" />
+            </WrapPanel>
+            <TextBlock Text="재생 속도와 상관없이 원래 속도로 저장합니다. '빠르게'는 시작이 가까운 키프레임으로 당겨질 수 있습니다."
+                       TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" />
+            <CheckBox x:Name="AudioCheck" Content="소리 포함" IsChecked="True" Margin="0,10,0,0" />
+        </StackPanel>
+        <StackPanel x:Name="GifPanel" Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="너비" Style="{StaticResource Label}" />
+                    <ComboBox x:Name="GifWidthCombo" SelectedIndex="1">
+                        <ComboBoxItem Content="320" />
+                        <ComboBoxItem Content="480" />
+                        <ComboBoxItem Content="640" />
+                        <ComboBoxItem Content="800" />
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="초당 장면 수" Style="{StaticResource Label}" />
+                    <ComboBox x:Name="GifFpsCombo" SelectedIndex="1">
+                        <ComboBoxItem Content="10" />
+                        <ComboBoxItem Content="15" />
+                        <ComboBoxItem Content="20" />
+                        <ComboBoxItem Content="25" />
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+            <TextBlock Text="GIF 는 길수록 파일이 커집니다. 10초 이내를 권합니다." TextWrapping="Wrap" FontSize="11.5"
+                       Foreground="{StaticResource TextDim}" Margin="0,6,0,0" />
+        </StackPanel>
+        <TextBlock x:Name="DeleteNote" Visibility="Collapsed" TextWrapping="Wrap" Foreground="{StaticResource TextDim}" Margin="0,10,0,0"
+                   Text="이 구간을 뺀 나머지를 새 파일로 저장합니다. 원본 파일은 그대로 둡니다." />
 
         <TextBlock Text="파일 이름" Style="{StaticResource Label}" />
         <TextBox x:Name="NameBox" />

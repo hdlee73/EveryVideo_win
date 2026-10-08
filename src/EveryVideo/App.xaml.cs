@@ -33,6 +33,9 @@ public partial class App : Application
             _ = new MainWindow(Array.Empty<string>());
             _ = new Dialogs.AboutWindow();
             _ = new Dialogs.ClipWindow("test.mp4", 60_000, 0, 10_000, () => 0);
+            _ = new Dialogs.ClipWindow("test.mp4", 60_000, 0, 10_000, () => 0, Dialogs.ClipMode.Gif);
+            _ = new Dialogs.ClipWindow("test.mp4", 60_000, 0, 10_000, () => 0, Dialogs.ClipMode.Delete);
+            _ = new Dialogs.ThumbnailWindow("test.mp4", 1_000, 60_000);
             _ = new Dialogs.ConcatWindow(Array.Empty<string>());
             _ = new Dialogs.RemoteWindow();
             _ = new Dialogs.ServerEditWindow(null);

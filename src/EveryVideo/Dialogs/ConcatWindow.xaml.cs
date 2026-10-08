@@ -18,6 +18,7 @@ public partial class ConcatWindow : CardWindow
         InitializeComponent();
         _files = new ObservableCollection<string>(initial);
         FileList.ItemsSource = _files;
+        ListHelpers.EnableDragReorder(FileList, _files);
         Closing += (_, e) =>
         {
             if (_cts != null && !CardDialog.Confirm("이어붙이기", "작업을 멈출까요?", "멈추기", "계속")) e.Cancel = true;
@@ -35,6 +36,42 @@ public partial class ConcatWindow : CardWindow
     {
         if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
             foreach (var f in files.Where(File.Exists)) _files.Add(f);
+    }
+
+    private string? _thumb;
+
+    private void FileList_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Delete) Remove_Click(sender, e);
+    }
+
+    private void Sort_Click(object sender, RoutedEventArgs e) => ListHelpers.ShowSortMenu(SortButton, kind =>
+    {
+        var sorted = ListHelpers.Sort(_files.ToList(), f => f, kind).ToList();
+        _files.Clear();
+        foreach (var f in sorted) _files.Add(f);
+    });
+
+    private void PickThumb_Click(object sender, RoutedEventArgs e)
+    {
+        var d = new OpenFileDialog
+        {
+            Title = "썸네일 그림", Filter = "그림|*.jpg;*.jpeg;*.png;*.bmp;*.webp",
+            InitialDirectory = Settings.Current.CaptureDir,
+        };
+        if (d.ShowDialog(this) != true) return;
+        _thumb = d.FileName;
+        ThumbText.Text = Path.GetFileName(_thumb);
+        ThumbOptions.IsEnabled = true;
+        ClearThumbButton.Visibility = Visibility.Visible;
+    }
+
+    private void ClearThumb_Click(object sender, RoutedEventArgs e)
+    {
+        _thumb = null;
+        ThumbText.Text = "(없음)";
+        ThumbOptions.IsEnabled = false;
+        ClearThumbButton.Visibility = Visibility.Collapsed;
     }
 
     private void Move(int delta)
@@ -56,7 +93,7 @@ public partial class ConcatWindow : CardWindow
 
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (_files.Count < 2)
+        if (_files.Count < (_thumb != null && IntroCheck.IsChecked == true ? 1 : 2))
         {
             StatusText.Text = "동영상을 두 개 이상 넣어 주세요.";
             return;
@@ -79,8 +116,11 @@ public partial class ConcatWindow : CardWindow
         _cts = new CancellationTokenSource();
         try
         {
+            var intro = _thumb != null && IntroCheck.IsChecked == true ? _thumb : null;
+            var cover = _thumb != null && CoverCheck.IsChecked == true ? _thumb : null;
+            var seconds = IntroSecCombo.SelectedIndex switch { 0 => 1, 2 => 3, 3 => 5, _ => 2 };
             await Ffmpeg.ConcatAsync(_files.ToList(), d.FileName, w, h, FastCheck.IsChecked == true,
-                new Progress<double>(p => Progress.Value = p), _cts.Token);
+                new Progress<double>(p => Progress.Value = p), _cts.Token, intro, seconds, cover);
             SavedPath = d.FileName;
             _cts = null;
             Close();

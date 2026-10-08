@@ -1,0 +1,37 @@
+<local:CardWindow x:Class="EveryVideo.Dialogs.ThumbnailWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:EveryVideo"
+                  Title="썸네일 만들기" CardIcon="{StaticResource IcCamera}">
+    <StackPanel Width="420">
+        <TextBlock x:Name="SourceText" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="종류" Style="{StaticResource Label}" />
+        <StackPanel>
+            <RadioButton x:Name="SingleRadio" Content="지금 화면 한 장" GroupName="kind" IsChecked="True" />
+            <RadioButton x:Name="SheetRadio" Content="장면 모음 (영상 전체에서 고르게 뽑아 바둑판으로)" GroupName="kind" />
+        </StackPanel>
+        <StackPanel x:Name="SheetPanel" Orientation="Horizontal" Margin="22,4,0,0" IsEnabled="{Binding IsChecked, ElementName=SheetRadio}">
+            <TextBlock Text="칸" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox x:Name="GridCombo" Width="120" SelectedIndex="1">
+                <ComboBoxItem Content="2 × 2" />
+                <ComboBoxItem Content="3 × 3" />
+                <ComboBoxItem Content="4 × 4" />
+                <ComboBoxItem Content="4 × 3" />
+                <ComboBoxItem Content="5 × 4" />
+            </ComboBox>
+        </StackPanel>
+        <TextBlock Text="그림 너비" Style="{StaticResource Label}" />
+        <ComboBox x:Name="WidthCombo" SelectedIndex="1">
+            <ComboBoxItem Content="1920 (FHD)" />
+            <ComboBoxItem Content="1280 (HD, 유튜브 썸네일)" />
+            <ComboBoxItem Content="640" />
+        </ComboBox>
+        <TextBlock Text="제목 글자 (선택, 그림 아래쪽에 크게)" Style="{StaticResource Label}" />
+        <TextBox x:Name="TitleBox" />
+        <TextBlock x:Name="StatusText" Foreground="{StaticResource Danger}" Margin="0,8,0,0" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="취소" Style="{StaticResource TextButton}" Click="Cancel_Click" />
+            <Button x:Name="SaveButton" Content="만들기" Style="{StaticResource PrimaryButton}" Click="Save_Click" />
+        </StackPanel>
+    </StackPanel>
+</local:CardWindow>

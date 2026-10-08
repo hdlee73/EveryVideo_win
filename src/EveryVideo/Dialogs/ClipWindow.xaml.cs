@@ -5,8 +5,11 @@ using Microsoft.Win32;
 
 namespace EveryVideo.Dialogs;
 
+public enum ClipMode { Save, Gif, Delete }
+
 public partial class ClipWindow : CardWindow
 {
+    private readonly ClipMode _mode;
     private readonly string _source;
     private readonly long _length;
     private readonly Func<long> _now;
@@ -16,9 +19,23 @@ public partial class ClipWindow : CardWindow
     /// <summary>저장에 성공한 파일</summary>
     public string? SavedPath { get; private set; }
 
-    public ClipWindow(string source, long length, long startMs, long endMs, Func<long> now)
+    public ClipWindow(string source, long length, long startMs, long endMs, Func<long> now, ClipMode mode = ClipMode.Save)
     {
         InitializeComponent();
+        _mode = mode;
+        if (mode == ClipMode.Gif)
+        {
+            Title = "GIF 만들기";
+            ClipPanel.Visibility = Visibility.Collapsed;
+            GifPanel.Visibility = Visibility.Visible;
+        }
+        else if (mode == ClipMode.Delete)
+        {
+            Title = "구간 삭제";
+            CardIcon = (System.Windows.Media.Geometry)FindResource("IcDelete");
+            ClipPanel.Visibility = Visibility.Collapsed;
+            DeleteNote.Visibility = Visibility.Visible;
+        }
         _source = source;
         _length = length;
         _now = now;
@@ -28,7 +45,9 @@ public partial class ClipWindow : CardWindow
         EndBox.Text = TimeFormat.Format(endMs, true);
         var baseName = Path.GetFileNameWithoutExtension(RemoteSources.DisplayName(source));
         foreach (var c in Path.GetInvalidFileNameChars()) baseName = baseName.Replace(c, '_');
-        NameBox.Text = $"{baseName}_{TimeFormat.Format(startMs).Replace(':', '-')}.mp4";
+        var ext = mode == ClipMode.Gif ? ".gif" : ".mp4";
+        var tag = mode == ClipMode.Delete ? "_구간삭제" : "_" + TimeFormat.Format(startMs).Replace(':', '-');
+        NameBox.Text = $"{baseName}{tag}{ext}";
         FolderText.Text = _folder;
         StartBox.TextChanged += (_, _) => UpdateLength();
         EndBox.TextChanged += (_, _) => UpdateLength();
@@ -71,8 +90,9 @@ public partial class ClipWindow : CardWindow
         }
         if (_length > 0) end = Math.Min(end, _length);
         var name = NameBox.Text.Trim();
-        if (name.Length == 0) name = "clip.mp4";
-        if (!name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)) name += ".mp4";
+        var ext = _mode == ClipMode.Gif ? ".gif" : ".mp4";
+        if (name.Length == 0) name = "clip" + ext;
+        if (!name.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) name += ext;
         var output = Path.Combine(_folder, name);
         if (File.Exists(output) && !CardDialog.Confirm("구간 저장", "같은 이름의 파일이 있습니다. 덮어쓸까요?", "덮어쓰기"))
             return;
@@ -84,8 +104,23 @@ public partial class ClipWindow : CardWindow
         _cts = new CancellationTokenSource();
         try
         {
-            await Ffmpeg.CutAsync(_source, start, end, output, AccurateRadio.IsChecked == true, AudioCheck.IsChecked == true,
-                new Progress<double>(p => Progress.Value = p), _cts.Token);
+            var progress = new Progress<double>(p => Progress.Value = p);
+            switch (_mode)
+            {
+                case ClipMode.Gif:
+                    var width = int.Parse(((System.Windows.Controls.ComboBoxItem)GifWidthCombo.SelectedItem).Content.ToString()!);
+                    var fps = int.Parse(((System.Windows.Controls.ComboBoxItem)GifFpsCombo.SelectedItem).Content.ToString()!);
+                    await Ffmpeg.GifAsync(_source, start, end, output, width, fps, progress, _cts.Token);
+                    break;
+                case ClipMode.Delete:
+                    if (_length <= 0) throw new InvalidOperationException("영상 길이를 알 수 없습니다.");
+                    await Ffmpeg.KeepSegmentsAsync(_source, Ffmpeg.Complement(new[] { (start, end) }, _length), output, progress, _cts.Token);
+                    break;
+                default:
+                    await Ffmpeg.CutAsync(_source, start, end, output, AccurateRadio.IsChecked == true, AudioCheck.IsChecked == true,
+                        progress, _cts.Token);
+                    break;
+            }
             SavedPath = output;
             _cts = null;
             Close();

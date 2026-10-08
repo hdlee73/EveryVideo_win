@@ -33,9 +33,12 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="18">
-                        <Path x:Name="ic" Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
-                              Fill="{TemplateBinding Foreground}" Stretch="Uniform"
-                              Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <!-- 아이콘의 24x24 여백을 그대로 살려 눈으로 보기에 가운데에 오게 한다 -->
+                        <Viewbox x:Name="ic" Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Fill="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Canvas>
+                        </Viewbox>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -61,8 +64,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="23">
-                        <Path Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
-                              Fill="White" Stretch="Uniform" Width="24" Height="24" />
+                        <Viewbox Width="30" Height="30" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Fill="White" />
+                            </Canvas>
+                        </Viewbox>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -86,8 +92,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="bd" Background="Transparent" CornerRadius="18">
-                        <Path x:Name="ic" Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
-                              Fill="{TemplateBinding Foreground}" Stretch="Uniform" Width="20" Height="20" />
+                        <Viewbox Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path x:Name="ic" Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Fill="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Canvas>
+                        </Viewbox>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
