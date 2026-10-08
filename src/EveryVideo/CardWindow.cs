@@ -25,6 +25,8 @@ public class CardWindow : Window
     public CardWindow()
     {
         SetResourceReference(StyleProperty, typeof(CardWindow));
+        // WindowStartupLocation 은 의존 속성이 아니라서 스타일로 줄 수 없다.
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (Application.Current?.MainWindow is { IsLoaded: true } main && !ReferenceEquals(main, this))
             Owner = main;
         PreviewKeyDown += (_, e) =>
