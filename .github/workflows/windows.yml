@@ -43,7 +43,7 @@ jobs:
 
       - name: Build
         run: |
-          dotnet publish src/EveryVideo/EveryVideo.csproj -c Release -r win-x64 --self-contained true \
+          dotnet publish src/EveryVideo/EveryVideo.csproj -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true \
             -p:Version="${{ steps.ver.outputs.name }}" -p:BuildDate="${{ steps.ver.outputs.date }}" \
             -o dist/EveryVideo
           rm -f dist/EveryVideo/*.pdb
@@ -67,20 +67,30 @@ jobs:
           if (Test-Path $log) { Get-Content $log; Remove-Item $log }
           if ($p.ExitCode -ne 0) { Write-Error "self test failed (code $($p.ExitCode))"; exit 1 }
 
-      - name: Smoke test (starts and stays up)
+      - name: Smoke test (plays, starts fast the second time, closes quickly)
         shell: pwsh
         run: |
           # 시험용 동영상을 만들어 실제로 재생해 본다.
           & "dist\EveryVideo\ffmpeg\ffmpeg.exe" -hide_banner -loglevel error -y -f lavfi -i testsrc=d=20:s=1280x720:r=30 -f lavfi -i sine=d=20 -c:v libx264 -c:a aac -shortest "$env:RUNNER_TEMP\test.mp4"
-          $p = Start-Process -FilePath "dist\EveryVideo\EveryVideo.exe" -ArgumentList "`"$env:RUNNER_TEMP\test.mp4`"" -PassThru
-          Start-Sleep -Seconds 15
           $log = Join-Path $env:APPDATA "EveryVideo\log.txt"
+          $plugins = "dist\EveryVideo\libvlc\win-x64\plugins"
+          foreach ($run in 1, 2) {
+            $p = Start-Process -FilePath "dist\EveryVideo\EveryVideo.exe" -ArgumentList "`"$env:RUNNER_TEMP\test.mp4`"" -PassThru
+            Start-Sleep -Seconds 12
+            if ($p.HasExited) { if (Test-Path $log) { Get-Content $log }; Write-Error "EveryVideo exited early (code $($p.ExitCode))"; exit 1 }
+            $sw = [Diagnostics.Stopwatch]::StartNew()
+            $null = $p.CloseMainWindow()
+            if (-not $p.WaitForExit(4000)) { Stop-Process -Id $p.Id -Force; Write-Error "EveryVideo did not close within 4 s"; exit 1 }
+            Write-Host "run $run closed in $($sw.ElapsedMilliseconds) ms"
+            if ($run -eq 1 -and -not (Test-Path "$plugins\plugins.dat")) { Write-Error "plugins cache was not created"; exit 1 }
+          }
           if (Test-Path $log) { Get-Content $log }
-          if ($p.HasExited) { Write-Error "EveryVideo exited early (code $($p.ExitCode))"; exit 1 }
-          Stop-Process -Id $p.Id -Force
           if ((Test-Path $log) -and (Select-String -Path $log -Pattern "unhandled|libvlc init|video host|play error" -Quiet)) {
             Write-Error "EveryVideo logged a startup error"; exit 1
           }
+          if (-not (Select-String -Path $log -Pattern "playing test.mp4" -Quiet)) { Write-Error "test.mp4 did not play"; exit 1 }
+          # 캐시는 받는 PC 에서 처음 실행할 때 만든다(파일 시각이 PC 마다 달라서).
+          Remove-Item "$plugins\plugins.dat", "$plugins\plugins.ver" -ErrorAction SilentlyContinue
 
       - name: Portable zip
         run: |

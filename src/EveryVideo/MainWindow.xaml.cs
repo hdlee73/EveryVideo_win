@@ -117,6 +117,8 @@ public partial class MainWindow : Window
     private long _thumbHover = -1;
     private bool _thumbBusy;
     private CancellationTokenSource _thumbCts = new();
+    private int? _pendingPlay;
+    private bool _closing;
 
     public MainWindow(string[] args)
     {
@@ -124,6 +126,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         Width = Math.Max(MinWidth, _settings.WindowWidth);
         Height = Math.Max(MinHeight, _settings.WindowHeight);
+        if (Math.Abs(_settings.SidePanelWidth - 300) < 0.5) _settings.SidePanelWidth = 260; // 예전 기본 너비는 너무 넓었다.
         PlaylistBox.ItemsSource = _playlist;
         SegmentBox.ItemsSource = _segments;
         ListHelpers.EnableDragReorder(PlaylistBox, _playlist, RecomputeCurrent);
@@ -158,16 +161,19 @@ public partial class MainWindow : Window
 
     // ================= 시작 / 끝 =================
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        HookVideoHost();
+        _tick.Start();
+        // 목록은 바로 채우고, 재생은 엔진이 준비되면 시작한다.
+        var files = _startupArgs.Where(a => File.Exists(a) || Directory.Exists(a) || RemoteSources.IsUrl(a)).ToList();
+        if (files.Count > 0) AddAndPlay(ExpandPaths(files));
+
+        // 창을 먼저 보여 주고, 재생 엔진은 뒤에서 준비한다.
         try
         {
-            _vlc = new LibVLC(
-                "--no-video-title-show",
-                "--no-snapshot-preview",
-                "--snapshot-format=png",
-                "--network-caching=1500",
-                _settings.HardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none");
+            _vlc = await VlcEngine.CreateAsync(_settings.HardwareDecoding);
+            if (_closing) return;
             _mp = new MediaPlayer(_vlc)
             {
                 EnableHardwareDecoding = _settings.HardwareDecoding,
@@ -177,7 +183,13 @@ public partial class MainWindow : Window
             // libvlc 이벤트 안에서 바로 재생을 다시 시작하지 않도록 잠깐 뒤에 처리한다.
             _mp.EndReached += (_, _) => Task.Delay(60).ContinueWith(_ => Dispatcher.BeginInvoke(OnEnded));
             _mp.EncounteredError += (_, _) => Task.Delay(60).ContinueWith(_ => Dispatcher.BeginInvoke(OnError));
-            _mp.Vout += (_, _) => Dispatcher.BeginInvoke(() => { ApplyAdjust(); ApplyZoom(); });
+            _mp.Vout += (_, _) => Dispatcher.BeginInvoke(() =>
+            {
+                ApplyAdjust();
+                ApplyZoom();
+                if (_settings.Brightness != 0 && !_osdTimer.IsEnabled)
+                    ShowOsd($"밝기 {Signed(_settings.Brightness)} 적용 중 (밝기 버튼에서 되돌리기)", 2);
+            });
             _mp.Playing += (_, _) => Dispatcher.BeginInvoke(() =>
             {
                 _mp?.SetRate(_rate);
@@ -194,8 +206,6 @@ public partial class MainWindow : Window
             CardDialog.Show("재생 엔진을 시작하지 못했습니다", ex.Message, MessageKind.Error);
         }
 
-        HookVideoHost();
-
         // 동영상 위 레이어(별도 창)에서도 단축키가 먹도록
         Dispatcher.BeginInvoke(() =>
         {
@@ -203,10 +213,9 @@ public partial class MainWindow : Window
                 overlayWindow.PreviewKeyDown += OnKey;
         }, DispatcherPriority.ApplicationIdle);
 
-        _tick.Start();
-        var files = _startupArgs.Where(a => File.Exists(a) || Directory.Exists(a) || RemoteSources.IsUrl(a)).ToList();
-        if (files.Count > 0) AddAndPlay(ExpandPaths(files));
-
+        // 엔진이 준비되기 전에 끌어다 놓은 파일이 있으면 지금 재생한다.
+        if (_pendingPlay is { } pending && pending < _playlist.Count) PlayAt(pending);
+        _pendingPlay = null;
         _ = CheckUpdateAtStartupAsync();
     }
 
@@ -233,6 +242,7 @@ public partial class MainWindow : Window
 
     private void OnClosing(object? sender, CancelEventArgs e)
     {
+        _closing = true;
         SaveResume();
         if (!_fullscreen && WindowState == WindowState.Normal)
         {
@@ -242,19 +252,30 @@ public partial class MainWindow : Window
         _settings.Save();
         _tick.Stop();
         _thumbCts.Cancel();
-        try
+
+        // 창은 바로 감추고, 재생 엔진 정리는 뒤에서 한다. 정리가 늦어져도 기다리지 않는다.
+        Hide();
+        var mp = _mp;
+        var vlc = _vlc;
+        _mp = null;
+        try { VideoView.MediaPlayer = null; } catch { }
+        var cleanup = Task.Run(() =>
         {
-            var mp = _mp;
-            _mp = null;
-            VideoView.MediaPlayer = null;
-            mp?.Stop();
-            mp?.Dispose();
-            _vlc?.Dispose();
-        }
-        catch (Exception ex)
-        {
-            Log.Write("close", ex);
-        }
+            try
+            {
+                mp?.Stop();
+                mp?.Dispose();
+                vlc?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Log.Write("close", ex);
+            }
+        });
+        cleanup.Wait(1500);
+        Log.Write("closed", null, cleanup.IsCompleted ? "" : "engine cleanup timed out");
+        // 화면 녹화 창이 열려 있으면 녹화가 끝날 때까지 앱을 남겨 둔다.
+        if (_recorder is not { IsLoaded: true }) Environment.Exit(0);
     }
 
     private async Task CheckUpdateAtStartupAsync()
@@ -337,7 +358,12 @@ public partial class MainWindow : Window
 
     private void PlayAt(int index, long? startMs = null, bool software = false)
     {
-        if (_mp == null || _vlc == null || index < 0 || index >= _playlist.Count) return;
+        if (index < 0 || index >= _playlist.Count) return;
+        if (_mp == null || _vlc == null)
+        {
+            _pendingPlay = index;
+            return;
+        }
         SaveResume();
         if (CurrentItem != null) CurrentItem.IsCurrent = false;
         _current = index;
@@ -1107,12 +1133,6 @@ public partial class MainWindow : Window
         menu.IsOpen = true;
     }
 
-    private void SpeedButton_RightClick(object sender, MouseButtonEventArgs e)
-    {
-        SetRate(1f);
-        e.Handled = true;
-    }
-
     private void SpeedUp_Click(object sender, RoutedEventArgs e) => SetRate(Speeds.FirstOrDefault(s => s > _rate + 0.01f, MaxRate));
     private void SpeedDown_Click(object sender, RoutedEventArgs e) => SetRate(Speeds.LastOrDefault(s => s < _rate - 0.01f, 0.25f));
     private void SpeedReset_Click(object sender, RoutedEventArgs e) => SetRate(1f);
@@ -1183,8 +1203,10 @@ public partial class MainWindow : Window
         var on = b != 0 || c != 0 || s != 0;
         _mp.SetAdjustInt(VideoAdjustOption.Enable, on ? 1 : 0);
         if (!on) return;
-        _mp.SetAdjustFloat(VideoAdjustOption.Brightness, 1f + b * (b > 0 ? 1.0f : 0.8f));
-        _mp.SetAdjustFloat(VideoAdjustOption.Gamma, 1f + b * (b > 0 ? 1.6f : 0.5f));
+        // libvlc 의 밝기는 모든 화소에 같은 값을 더한다(2.0 이면 화면 전체가 흰색).
+        // 그래서 밝게 할 때는 대부분 감마로 어두운 부분을 끌어올리고, 더하는 값은 조금만 쓴다.
+        _mp.SetAdjustFloat(VideoAdjustOption.Brightness, 1f + b * (b > 0 ? 0.25f : 0.4f));
+        _mp.SetAdjustFloat(VideoAdjustOption.Gamma, 1f + b * (b > 0 ? 1.2f : 0.5f));
         _mp.SetAdjustFloat(VideoAdjustOption.Contrast, 1f + c * (c > 0 ? 1.0f : 0.8f));
         _mp.SetAdjustFloat(VideoAdjustOption.Saturation, 1f + s);
     }
@@ -1449,9 +1471,8 @@ public partial class MainWindow : Window
             _prevState = WindowState;
             _prevBounds = new Rect(Left, Top, Width, Height);
             TopMenu.Visibility = Visibility.Collapsed;
-            SidePanel.Visibility = Visibility.Collapsed;
-            SideSplitter.Visibility = Visibility.Collapsed;
-            SideColumn.Width = new GridLength(0);
+            // 패널 칸의 최소 너비까지 0 으로 해야 전체화면에서 오른쪽 띠가 남지 않는다.
+            UpdateSidePanelVisibility();
             ControlsHost.Child = null;
             FsControlsHost.Child = ControlBar;
             ControlsHost.Visibility = Visibility.Collapsed;
@@ -1847,8 +1868,9 @@ public partial class MainWindow : Window
         var show = _settings.ShowSidePanel && !_fullscreen;
         SidePanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         SideSplitter.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        SideColumn.Width = show ? new GridLength(Math.Clamp(_settings.SidePanelWidth, 220, 600)) : new GridLength(0);
-        SideColumn.MinWidth = show ? 220 : 0;
+        SideColumn.MinWidth = 0;
+        SideColumn.Width = show ? new GridLength(Math.Clamp(_settings.SidePanelWidth, 200, 600)) : new GridLength(0);
+        SideColumn.MinWidth = show ? 200 : 0;
     }
 
     private void SideSplitter_DragCompleted(object sender, DragCompletedEventArgs e)

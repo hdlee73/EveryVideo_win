@@ -44,7 +44,7 @@ public sealed class Settings
     public int Saturation { get; set; }
     public RepeatMode Repeat { get; set; } = RepeatMode.All;
     public bool ShowSidePanel { get; set; } = true;
-    public double SidePanelWidth { get; set; } = 300;
+    public double SidePanelWidth { get; set; } = 260;
     public bool CheckUpdates { get; set; } = true;
     public string? SkippedVersion { get; set; }
     public bool HardwareDecoding { get; set; } = true;

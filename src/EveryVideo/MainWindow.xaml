@@ -86,7 +86,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition x:Name="SideColumn" Width="300" MinWidth="0" />
+                <ColumnDefinition x:Name="SideColumn" Width="260" MinWidth="0" />
             </Grid.ColumnDefinitions>
 
             <!-- 동영상 -->
@@ -146,7 +146,7 @@
             <!-- 재생목록 · 즐겨찾기 · 구간 -->
             <Border x:Name="SidePanel" Grid.Column="2" Background="{StaticResource PanelBg}">
                 <DockPanel>
-                    <Grid DockPanel.Dock="Top" Margin="8,10,10,6">
+                    <Grid DockPanel.Dock="Top" Margin="8,10,8,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition />
                             <ColumnDefinition />
@@ -162,20 +162,20 @@
 
                     <!-- 재생목록 -->
                     <DockPanel x:Name="PlaylistPanel">
-                        <DockPanel DockPanel.Dock="Top" Margin="14,0,8,2">
+                        <DockPanel DockPanel.Dock="Top" Margin="12,0,4,2">
                             <Button x:Name="PlaylistSortButton" DockPanel.Dock="Right" Content="정렬 ▾" Style="{StaticResource TextButton}" MinWidth="0"
                                     Padding="10,0" Height="28" Foreground="{StaticResource Text}" Click="PlaylistSort_Click" />
                             <TextBlock x:Name="PlaylistCount" VerticalAlignment="Center" Foreground="{StaticResource TextDim}" FontSize="12"
                                        Text="끌어서 순서 바꾸기 · × 로 빼기" />
                         </DockPanel>
-                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="8,4,8,8">
+                        <UniformGrid DockPanel.Dock="Bottom" Rows="1" Margin="6,4,6,8">
                             <Button Style="{StaticResource IconButton}" Tag="{StaticResource IcAdd}" ToolTip="파일 추가" Click="AddFiles_Click" />
                             <Button Style="{StaticResource IconButton}" Tag="{StaticResource IcFolder}" ToolTip="폴더 추가" Click="AddFolder_Click" />
                             <Button Style="{StaticResource IconButton}" Tag="{StaticResource IcUp}" ToolTip="위로" Click="PlaylistUp_Click" />
                             <Button Style="{StaticResource IconButton}" Tag="{StaticResource IcDown}" ToolTip="아래로" Click="PlaylistDown_Click" />
                             <Button Style="{StaticResource IconButton}" Tag="{StaticResource IcDelete}" ToolTip="고른 항목 목록에서 빼기 (Del)" Click="PlaylistRemove_Click" />
                             <Button Style="{StaticResource IconButton}" Tag="{StaticResource IcClose}" ToolTip="목록 비우기" Click="PlaylistClear_Click" />
-                        </StackPanel>
+                        </UniformGrid>
                         <ListBox x:Name="PlaylistBox" Margin="6,0" MouseDoubleClick="PlaylistBox_DoubleClick" KeyDown="PlaylistBox_KeyDown"
                                  AllowDrop="True" Drop="Window_Drop" SelectionMode="Extended">
                             <ListBox.ItemTemplate>
@@ -266,25 +266,20 @@
         <!-- 조작 막대 -->
         <Border x:Name="ControlsHost" Grid.Row="2" Background="{StaticResource PanelBg}">
             <StackPanel x:Name="ControlBar" Margin="12,2,12,6">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="TimeText" Text="00:00" VerticalAlignment="Center" Width="62" Foreground="{StaticResource TextDim}" />
-                    <Grid x:Name="SeekArea" Grid.Column="1" Height="34" Background="Transparent">
-                        <Canvas x:Name="SegmentCanvas" ClipToBounds="False" IsHitTestVisible="False" />
-                        <Slider x:Name="SeekSlider" Maximum="1" SmallChange="1000" LargeChange="10000"
-                                MouseMove="Seek_MouseMove" MouseLeave="Seek_MouseLeave" ValueChanged="Seek_ValueChanged" />
-                        <Canvas x:Name="MarkerCanvas" ClipToBounds="False" />
-                    </Grid>
-                    <TextBlock x:Name="DurationText" Grid.Column="2" Text="00:00" VerticalAlignment="Center" Width="62"
-                               TextAlignment="Right" Foreground="{StaticResource TextDim}" />
+                <!-- 시간 막대: 시간은 막대 아래 양끝에 -->
+                <Grid x:Name="SeekArea" Height="26" Background="Transparent">
+                    <Canvas x:Name="SegmentCanvas" ClipToBounds="False" IsHitTestVisible="False" />
+                    <Slider x:Name="SeekSlider" Maximum="1" SmallChange="1000" LargeChange="10000"
+                            MouseMove="Seek_MouseMove" MouseLeave="Seek_MouseLeave" ValueChanged="Seek_ValueChanged" />
+                    <Canvas x:Name="MarkerCanvas" ClipToBounds="False" />
+                </Grid>
+                <Grid Margin="2,-4,2,0">
+                    <TextBlock x:Name="TimeText" Text="00:00" HorizontalAlignment="Left" FontSize="12" Foreground="{StaticResource TextDim}" />
+                    <TextBlock x:Name="DurationText" Text="00:00" HorizontalAlignment="Right" FontSize="12" Foreground="{StaticResource TextDim}" />
                 </Grid>
 
                 <!-- 왼쪽: 볼륨 / 가운데: 재생 / 오른쪽: 도구 -->
-                <Grid Margin="0,2,0,0">
+                <Grid Margin="0,-2,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
                         <ColumnDefinition Width="Auto" />
@@ -297,11 +292,15 @@
                         <Slider x:Name="VolumeSlider" Width="100" Maximum="200" Value="100" ValueChanged="Volume_Changed"
                                 ToolTip="볼륨 (↑↓, 마우스 휠) · 100% 넘게 키울 수 있음" />
                         <TextBlock x:Name="VolumeText" Text="100%" Width="42" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextDim}" />
-                        <Button x:Name="SpeedButton" Content="1.0x" Style="{StaticResource TextButton}" MinWidth="54" Padding="8,0" Margin="4,0,0,0"
-                                Foreground="{StaticResource Text}" ToolTip="재생 속도 ([ ]) · 오른쪽 클릭하면 원래 속도" Click="Speed_Click"
-                                MouseRightButtonUp="SpeedButton_RightClick" />
-                        <Button x:Name="SpeedResetButton" Content="1x" Style="{StaticResource TextButton}" MinWidth="0" Padding="8,0" Margin="2,0,0,0"
-                                Height="28" ToolTip="원래 속도로 (Backspace)" Click="SpeedReset_Click" Visibility="Collapsed" />
+                        <Button Style="{StaticResource IconButton}" Width="28" Height="28" Margin="6,0,0,0" Tag="{StaticResource IcRemove}"
+                                ToolTip="느리게 ([)" Click="SpeedDown_Click" />
+                        <Button x:Name="SpeedButton" Content="1.0x" Style="{StaticResource TextButton}" MinWidth="52" Padding="6,0" Margin="0"
+                                Height="30" Foreground="{StaticResource Text}" ToolTip="재생 속도 고르기 ([ ])" Click="Speed_Click" />
+                        <Button Style="{StaticResource IconButton}" Width="28" Height="28" Tag="{StaticResource IcAdd}"
+                                ToolTip="빠르게 (])" Click="SpeedUp_Click" />
+                        <Button x:Name="SpeedResetButton" Content="1배속으로" Style="{StaticResource TextButton}" MinWidth="0" Padding="12,0" Margin="6,0,0,0"
+                                Height="30" Background="{StaticResource Brand}" Foreground="White" ToolTip="원래 속도로 (Backspace, \)"
+                                Click="SpeedReset_Click" Visibility="Collapsed" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="12,0">

@@ -10,10 +10,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandled;
-        LibVLCSharp.Shared.Core.Initialize();
 
         if (e.Args.Contains("--selftest"))
         {
+            LibVLCSharp.Shared.Core.Initialize();
             Shutdown(SelfTest() ? 0 : 1);
             return;
         }

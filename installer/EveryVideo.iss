@@ -105,3 +105,8 @@ Root: HKA; Subkey: "Software\Classes\Applications\EveryVideo.exe\SupportedTypes"
 
 [Run]
 Filename: "{app}\EveryVideo.exe"; Description: "{cm:LaunchProgram,EveryVideo}"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+; 처음 실행할 때 만드는 재생 엔진 부품 캐시
+Type: files; Name: "{app}\libvlc\win-x64\plugins\plugins.dat"
+Type: files; Name: "{app}\libvlc\win-x64\plugins\plugins.ver"
