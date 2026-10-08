@@ -1,0 +1,62 @@
+<local:CardWindow x:Class="EveryVideo.Dialogs.AboutWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:EveryVideo"
+                  Title="앱 정보" CardIcon="{StaticResource IcInfo}">
+    <StackPanel Width="400">
+        <StackPanel Orientation="Horizontal" Margin="0,4,0,14">
+            <Image Source="/Assets/app.png" Width="64" Height="64" />
+            <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="NameText" FontSize="22" FontWeight="Bold" />
+                <TextBlock Text="동영상 재생 · 캡쳐 · 구간 저장 · 이어붙이기" Foreground="{StaticResource TextDim}" Margin="0,4,0,0" />
+            </StackPanel>
+        </StackPanel>
+
+        <Border Background="{StaticResource CardHigh}" CornerRadius="12" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="28" />
+                    <RowDefinition Height="28" />
+                    <RowDefinition Height="28" />
+                    <RowDefinition Height="28" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="앱 이름" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                <TextBlock x:Name="AppNameText" Grid.Column="1" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="1" Text="버전" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="2" Text="만든이" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="2" Grid.Column="1" VerticalAlignment="Center">
+                    <Run x:Name="AuthorRun" />
+                    <Hyperlink x:Name="MailLink" Foreground="{StaticResource BrandLight}" Click="Mail_Click"><Run x:Name="MailRun" /></Hyperlink>
+                </TextBlock>
+                <TextBlock Grid.Row="3" Text="업데이트" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="3" Grid.Column="1" VerticalAlignment="Center">
+                    <Hyperlink Foreground="{StaticResource BrandLight}" Click="Releases_Click">릴리스 페이지 열기</Hyperlink>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <Border Background="{StaticResource CardHigh}" CornerRadius="12" Padding="16,12" Margin="0,10,0,0">
+            <DockPanel>
+                <Button x:Name="CheckButton" DockPanel.Dock="Right" Content="업데이트 확인" Style="{StaticResource TextButton}" Click="Check_Click" />
+                <Path Data="{StaticResource IcUpdate}" Fill="{StaticResource TextDim}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0" />
+                <TextBlock x:Name="UpdateText" Text="업데이트를 확인하려면 오른쪽 버튼을 누르세요." TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+        <Button x:Name="DownloadButton" Content="새 버전 내려받기" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch"
+                Margin="0,10,0,0" Visibility="Collapsed" Click="Download_Click" />
+
+        <CheckBox x:Name="AutoCheck" Content="시작할 때 새 버전이 있는지 확인하고 알려주기" Margin="2,12,0,0" />
+
+        <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" Margin="2,12,0,0"
+                   Text="재생 엔진: LibVLC (LGPL) · 편집/녹화: FFmpeg (GPL). 각 라이선스는 설치 폴더에 함께 들어 있습니다." />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="닫기" Style="{StaticResource PrimaryButton}" IsDefault="True" Click="Close_Click" />
+        </StackPanel>
+    </StackPanel>
+</local:CardWindow>

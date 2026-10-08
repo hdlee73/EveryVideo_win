@@ -1,0 +1,37 @@
+<local:CardWindow x:Class="EveryVideo.Dialogs.BookmarksWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:EveryVideo"
+                  Title="즐겨찾기 모음" CardIcon="{StaticResource IcBookmarks}">
+    <DockPanel Width="620" Height="460">
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Margin="0,0,0,8" ToolTip="동영상 이름이나 메모로 찾기" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="지우기" Style="{StaticResource TextButton}" Click="Delete_Click" />
+            <Button Content="메모 고치기" Style="{StaticResource TextButton}" Click="Edit_Click" />
+            <Button Content="이 시점부터 재생" Style="{StaticResource PrimaryButton}" Click="Open_Click" />
+        </StackPanel>
+        <Border Background="{StaticResource CardHigh}" CornerRadius="12" Padding="4">
+            <ListBox x:Name="List" MouseDoubleClick="List_DoubleClick">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{StaticResource BrandLight}" Margin="8,10,0,2"
+                                           TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding CreatedText}" FontSize="11.5" Foreground="{StaticResource TextDim}" />
+                            <TextBlock Text="{Binding Time}" Width="70" Foreground="{StaticResource Accent}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding NoteOrTime}" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</local:CardWindow>

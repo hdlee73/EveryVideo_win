@@ -1,0 +1,55 @@
+<local:CardWindow x:Class="EveryVideo.Dialogs.ClipWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:EveryVideo"
+                  Title="구간 저장" CardIcon="{StaticResource IcCut}">
+    <StackPanel Width="440">
+        <TextBlock x:Name="SourceText" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
+        <Grid Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="시작" Style="{StaticResource Label}" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="현재 위치" Style="{StaticResource TextButton}" MinWidth="0" Padding="10,0" Click="StartNow_Click" />
+                    <TextBox x:Name="StartBox" />
+                </DockPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="끝" Style="{StaticResource Label}" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="현재 위치" Style="{StaticResource TextButton}" MinWidth="0" Padding="10,0" Click="EndNow_Click" />
+                    <TextBox x:Name="EndBox" />
+                </DockPanel>
+            </StackPanel>
+        </Grid>
+        <TextBlock x:Name="LengthText" Foreground="{StaticResource TextDim}" Margin="0,6,0,0" FontSize="12" />
+
+        <TextBlock Text="저장 방식" Style="{StaticResource Label}" />
+        <WrapPanel>
+            <RadioButton x:Name="FastRadio" Content="빠르게 (원본 그대로)" IsChecked="True" GroupName="mode" />
+            <RadioButton x:Name="AccurateRadio" Content="정확하게 (다시 인코딩)" GroupName="mode" />
+        </WrapPanel>
+        <TextBlock Text="빠르게 저장하면 시작 위치가 가까운 키프레임으로 조금 당겨질 수 있습니다. 실패하면 자동으로 다시 인코딩합니다."
+                   TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" />
+        <CheckBox x:Name="AudioCheck" Content="소리 포함" IsChecked="True" Margin="0,10,0,0" />
+
+        <TextBlock Text="파일 이름" Style="{StaticResource Label}" />
+        <TextBox x:Name="NameBox" />
+        <DockPanel Margin="0,6,0,0">
+            <Button DockPanel.Dock="Right" Content="저장 위치 변경" Style="{StaticResource TextButton}" Click="Folder_Click" />
+            <TextBlock x:Name="FolderText" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="12" />
+        </DockPanel>
+
+        <ProgressBar x:Name="Progress" Margin="0,14,0,0" Maximum="1" Visibility="Collapsed" />
+        <TextBlock x:Name="StatusText" Foreground="{StaticResource TextDim}" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="CancelButton" Content="취소" Style="{StaticResource TextButton}" Click="Cancel_Click" />
+            <Button x:Name="SaveButton" Content="저장" Style="{StaticResource PrimaryButton}" Click="Save_Click" />
+        </StackPanel>
+    </StackPanel>
+</local:CardWindow>

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>false</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AssemblyName>EveryVideo</AssemblyName>
+    <RootNamespace>EveryVideo</RootNamespace>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Product>EveryVideo</Product>
+    <Company>이현덕</Company>
+    <Authors>이현덕</Authors>
+    <Copyright>© 이현덕 (hdlee73@gmail.com)</Copyright>
+    <Description>EveryVideo 동영상 재생기 (Windows)</Description>
+    <!-- VERSION 파일이 버전의 기준. CI 는 -p:Version=... 로 덮어쓸 수 있다. -->
+    <Version Condition="'$(Version)' == ''">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\VERSION').Trim())</Version>
+    <BuildDate Condition="'$(BuildDate)' == ''">$([System.DateTime]::Now.ToString('yyyy-MM-dd'))</BuildDate>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+    <SatelliteResourceLanguages>ko</SatelliteResourceLanguages>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <NoWarn>$(NoWarn);SYSLIB0014</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="BuildDate" Value="$(BuildDate)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LibVLCSharp.WPF" Version="3.9.1" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+    <PackageReference Include="FluentFTP" Version="52.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\app.png" />
+  </ItemGroup>
+
+</Project>
