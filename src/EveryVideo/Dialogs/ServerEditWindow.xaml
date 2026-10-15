@@ -7,6 +7,7 @@
         <WrapPanel>
             <RadioButton x:Name="FtpRadio" Content="FTP" GroupName="kind" IsChecked="True" />
             <RadioButton x:Name="SmbRadio" Content="SMB (윈도우 공유 폴더 · NAS)" GroupName="kind" />
+            <RadioButton x:Name="DavRadio" Content="WebDAV (NAS · Nextcloud)" GroupName="kind" />
         </WrapPanel>
         <TextBlock Text="표시 이름 (선택)" Style="{StaticResource Label}" />
         <TextBox x:Name="NameBox" />
@@ -17,7 +18,7 @@
                 <ColumnDefinition Width="90" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="주소 (IP 또는 이름)" Style="{StaticResource Label}" />
+                <TextBlock x:Name="HostLabel" Text="주소 (IP 또는 이름)" Style="{StaticResource Label}" />
                 <TextBox x:Name="HostBox" />
             </StackPanel>
             <StackPanel Grid.Column="2">

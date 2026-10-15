@@ -41,6 +41,7 @@ public partial class App : Application
             _ = new Dialogs.ServerEditWindow(null);
             _ = new Dialogs.BookmarksWindow();
             _ = new Dialogs.RecorderWindow();
+            _ = new Dialogs.LinksWindow(new[] { Services.WebMedia.LinkOf("https://example.com/a.mp4") }, "https://example.com", true);
             if (!Ffmpeg.Available) throw new InvalidOperationException("ffmpeg.exe not found");
             Log.Write("selftest ok", null, $"v{AppInfo.Version} ({AppInfo.BuildDate}) ffmpeg={Ffmpeg.ExePath}");
             return true;

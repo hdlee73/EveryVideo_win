@@ -1,5 +1,9 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using FluentFTP;
 
@@ -16,7 +20,7 @@ public sealed record RemoteItem(string Name, string Location, bool IsFolder, lon
     };
 }
 
-/// <summary>구글 드라이브 링크, FTP, SMB(윈도우 공유 폴더) 주소를 다룬다.</summary>
+/// <summary>구글 드라이브 링크, FTP, SMB(윈도우 공유 폴더), WebDAV 주소를 다룬다.</summary>
 public static class RemoteSources
 {
     public static readonly string[] VideoExtensions =
@@ -191,4 +195,76 @@ public static class RemoteSources
         }
         return list.OrderByDescending(i => i.IsFolder).ThenBy(i => i.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }, ct);
+
+    // ---------- WebDAV (NAS, Nextcloud 등) ----------
+
+    private static readonly HttpClient Http = new(new HttpClientHandler { AllowAutoRedirect = true })
+    {
+        Timeout = TimeSpan.FromSeconds(30),
+    };
+
+    /// <summary>서버에 적은 주소(https://nas:5006/dav 또는 nas.local)를 끝에 / 가 붙은 기준 주소로.</summary>
+    public static Uri WebDavBase(ServerEntry s)
+    {
+        var h = s.Host.Trim();
+        if (!h.Contains("://")) h = "http://" + h;
+        var b = new UriBuilder(h);
+        if (s.Port > 0) b.Port = s.Port;
+        if (!b.Path.EndsWith('/')) b.Path += "/";
+        return b.Uri;
+    }
+
+    /// <summary>시작 폴더 주소 (기준 주소 + Path).</summary>
+    public static string WebDavStart(ServerEntry s)
+    {
+        var start = WebDavBase(s).AbsoluteUri;
+        var p = s.Path.Trim('/', ' ');
+        return p.Length == 0 ? start : start + string.Join("/", p.Split('/').Select(Uri.EscapeDataString)) + "/";
+    }
+
+    /// <summary>재생할 주소. 계정이 있으면 주소에 넣어 LibVLC 가 그대로 로그인하게 한다.</summary>
+    public static string WebDavPlayUrl(ServerEntry s, string url)
+    {
+        if (string.IsNullOrEmpty(s.User)) return url;
+        var b = new UriBuilder(url) { UserName = Uri.EscapeDataString(s.User), Password = Uri.EscapeDataString(s.Password) };
+        return b.Uri.AbsoluteUri;
+    }
+
+    public static async Task<List<RemoteItem>> ListWebDavAsync(ServerEntry s, string folderUrl, CancellationToken ct)
+    {
+        if (!folderUrl.EndsWith('/')) folderUrl += "/";
+        using var req = new HttpRequestMessage(new HttpMethod("PROPFIND"), folderUrl)
+        {
+            Content = new StringContent(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?><d:propfind xmlns:d=\"DAV:\"><d:prop><d:resourcetype/><d:getcontentlength/></d:prop></d:propfind>",
+                Encoding.UTF8, "application/xml"),
+        };
+        req.Headers.Add("Depth", "1");
+        if (!string.IsNullOrEmpty(s.User))
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.UTF8.GetBytes($"{s.User}:{s.Password}")));
+        using var resp = await Http.SendAsync(req, ct);
+        if (resp.StatusCode == HttpStatusCode.Unauthorized) throw new InvalidOperationException("로그인 실패 (401). 사용자와 비밀번호를 확인해 주세요.");
+        if (!resp.IsSuccessStatusCode) throw new InvalidOperationException($"WebDAV 서버 응답 {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        var xml = XDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+        XNamespace d = "DAV:";
+        var self = new Uri(folderUrl);
+        var list = new List<RemoteItem>();
+        foreach (var r in xml.Descendants(d + "response"))
+        {
+            var href = r.Element(d + "href")?.Value.Trim();
+            if (string.IsNullOrEmpty(href)) continue;
+            var abs = new Uri(self, href);
+            if (Uri.UnescapeDataString(abs.AbsolutePath).TrimEnd('/') == Uri.UnescapeDataString(self.AbsolutePath).TrimEnd('/')) continue;
+            var isDir = r.Descendants(d + "collection").Any();
+            var name = Uri.UnescapeDataString(abs.AbsolutePath.TrimEnd('/').Split('/').Last());
+            if (name.Length == 0 || name.StartsWith('.')) continue;
+            if (!isDir && !IsMedia(name)) continue;
+            long.TryParse(r.Descendants(d + "getcontentlength").FirstOrDefault()?.Value, out var size);
+            var loc = new UriBuilder(abs) { UserName = "", Password = "" }.Uri.AbsoluteUri;
+            if (isDir && !loc.EndsWith('/')) loc += "/";
+            list.Add(new RemoteItem(name, loc, isDir, size));
+        }
+        return list.OrderByDescending(i => i.IsFolder).ThenBy(i => i.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
 }

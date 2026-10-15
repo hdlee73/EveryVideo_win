@@ -2,21 +2,21 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EveryVideo">
 
-    <!-- 색 (안드로이드 앱의 재생 화면 색과 맞춤) -->
-    <Color x:Key="BrandColor">#FF4F5BD5</Color>
+    <!-- 색 (안드로이드 앱의 재생 화면 색과 맞춤: 산뜻한 하늘빛 파랑 + 중립 그래파이트) -->
+    <Color x:Key="BrandColor">#FF2D7FF9</Color>
     <SolidColorBrush x:Key="Brand" Color="{StaticResource BrandColor}" />
-    <SolidColorBrush x:Key="BrandLight" Color="#FF8C94FF" />
-    <SolidColorBrush x:Key="Accent" Color="#FFFFB300" />
+    <SolidColorBrush x:Key="BrandLight" Color="#FF5C9BFF" />
+    <SolidColorBrush x:Key="Accent" Color="#FFFFB020" />
     <SolidColorBrush x:Key="Danger" Color="#FFE5484D" />
-    <SolidColorBrush x:Key="WindowBg" Color="#FF121218" />
-    <SolidColorBrush x:Key="PanelBg" Color="#FF181820" />
-    <SolidColorBrush x:Key="CardBg" Color="#FF202029" />
-    <SolidColorBrush x:Key="CardHigh" Color="#FF2A2A35" />
-    <SolidColorBrush x:Key="RowHover" Color="#1FFFFFFF" />
-    <SolidColorBrush x:Key="RowSelected" Color="#33FFFFFF" />
-    <SolidColorBrush x:Key="Line" Color="#22FFFFFF" />
-    <SolidColorBrush x:Key="Text" Color="#FFF2F2F5" />
-    <SolidColorBrush x:Key="TextDim" Color="#FFA6A6B3" />
+    <SolidColorBrush x:Key="WindowBg" Color="#FF0F1114" />
+    <SolidColorBrush x:Key="PanelBg" Color="#FF16181C" />
+    <SolidColorBrush x:Key="CardBg" Color="#FF1D2026" />
+    <SolidColorBrush x:Key="CardHigh" Color="#FF262A31" />
+    <SolidColorBrush x:Key="RowHover" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="RowSelected" Color="#402D7FF9" />
+    <SolidColorBrush x:Key="Line" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="Text" Color="#FFECEEF2" />
+    <SolidColorBrush x:Key="TextDim" Color="#FF9BA3B0" />
 
     <FontFamily x:Key="UiFont">Malgun Gothic, Segoe UI</FontFamily>
 
@@ -195,9 +195,14 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PasswordBox">
-                    <Border Background="{TemplateBinding Background}" CornerRadius="8">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="8" x:Name="bd" BorderBrush="Transparent" BorderThickness="1">
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
                     </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brand}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -230,7 +235,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}" Margin="0,1">
+                    <Border x:Name="bd" Background="Transparent" CornerRadius="10" Padding="{TemplateBinding Padding}" Margin="0,1">
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -251,7 +256,13 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Ellipse Width="14" Height="14" Fill="White" />
+                    <Ellipse x:Name="dot" Width="14" Height="14" Fill="White" Stroke="{StaticResource Brand}" StrokeThickness="3" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="dot" Property="Width" Value="16" />
+                            <Setter TargetName="dot" Property="Height" Value="16" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -281,7 +292,7 @@
                                 <RepeatButton Style="{StaticResource FlatRepeat}" Background="{StaticResource Brand}" Command="Slider.DecreaseLarge" />
                             </Track.DecreaseRepeatButton>
                             <Track.IncreaseRepeatButton>
-                                <RepeatButton Style="{StaticResource FlatRepeat}" Background="#44FFFFFF" Command="Slider.IncreaseLarge" />
+                                <RepeatButton Style="{StaticResource FlatRepeat}" Background="#33FFFFFF" Command="Slider.IncreaseLarge" />
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
                                 <Thumb Style="{StaticResource SliderThumb}" />

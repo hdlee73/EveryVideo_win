@@ -19,9 +19,10 @@
                 <MenuItem Header="파일 열기…" InputGestureText="Ctrl+O" Click="OpenFiles_Click" />
                 <MenuItem Header="폴더 열기…" InputGestureText="Ctrl+Shift+O" Click="OpenFolder_Click" />
                 <MenuItem Header="주소(URL)·공유 링크 열기…" InputGestureText="Ctrl+U" Click="OpenUrl_Click" />
+                <MenuItem Header="주소에서 내려받기…" Click="DownloadUrl_Click" />
                 <Separator />
                 <MenuItem Header="구글 드라이브…" Click="GoogleDrive_Click" />
-                <MenuItem Header="네트워크 (FTP · SMB)…" Click="Remote_Click" />
+                <MenuItem Header="네트워크 (FTP · SMB · WebDAV)…" Click="Remote_Click" />
                 <Separator />
                 <MenuItem x:Name="RecentMenu" Header="최근 파일" SubmenuOpened="RecentMenu_Opened">
                     <MenuItem Header="(없음)" IsEnabled="False" />
@@ -29,6 +30,7 @@
                 <Separator />
                 <MenuItem Header="캡쳐 저장 폴더 열기" Click="OpenCaptureFolder_Click" />
                 <MenuItem Header="동영상 저장 폴더 열기" Click="OpenVideoFolder_Click" />
+                <MenuItem Header="내려받은 폴더 열기" Click="OpenDownloadFolder_Click" />
                 <MenuItem Header="저장 위치 바꾸기…" Click="ChangeFolders_Click" />
                 <Separator />
                 <MenuItem Header="끝내기" Click="Exit_Click" />
@@ -46,6 +48,8 @@
                 <MenuItem Header="원래 속도 (1배)" InputGestureText="Backspace / \" Click="SpeedReset_Click" />
                 <Separator />
                 <MenuItem Header="음성 · 자막…" Click="Tracks_Click" />
+                <Separator />
+                <MenuItem x:Name="ResumeMenu" Header="이어서 재생 (마지막으로 보던 곳부터)" IsCheckable="True" Click="Resume_Click" />
             </MenuItem>
             <MenuItem Header="도구(_T)">
                 <MenuItem Header="화면 캡쳐" InputGestureText="C" Click="Capture_Click" />
@@ -126,7 +130,7 @@
                         </Border>
 
                         <!-- 전체화면일 때 조작 막대가 여기로 옮겨진다 -->
-                        <Border x:Name="FsControlsHost" VerticalAlignment="Bottom" Background="#E6181820" Visibility="Collapsed" />
+                        <Border x:Name="FsControlsHost" VerticalAlignment="Bottom" Background="#E6111317" Visibility="Collapsed" />
                     </Grid>
                 </vlc:VideoView>
             </Grid>
@@ -334,7 +338,7 @@
         <!-- 탐색 미리보기 -->
         <Popup x:Name="PreviewPopup" PlacementTarget="{Binding ElementName=SeekSlider}" Placement="Relative"
                AllowsTransparency="True" IsHitTestVisible="False">
-            <Border Background="#F0101016" CornerRadius="10" Padding="4" BorderBrush="{StaticResource Line}" BorderThickness="1">
+            <Border Background="#F0131519" CornerRadius="10" Padding="4" BorderBrush="{StaticResource Line}" BorderThickness="1">
                 <StackPanel>
                     <Border x:Name="PreviewFrame" Width="192" Height="108" CornerRadius="6" Background="Black" ClipToBounds="True">
                         <Image x:Name="PreviewImage" Stretch="Uniform" />

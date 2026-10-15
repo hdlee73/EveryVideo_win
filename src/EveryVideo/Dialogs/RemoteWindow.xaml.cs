@@ -5,7 +5,7 @@ using EveryVideo.Services;
 
 namespace EveryVideo.Dialogs;
 
-/// <summary>등록한 FTP/SMB 서버의 폴더를 둘러보고 동영상을 고른다.</summary>
+/// <summary>등록한 FTP/SMB/WebDAV 서버의 폴더를 둘러보고 동영상을 고른다.</summary>
 public partial class RemoteWindow : CardWindow
 {
     private ServerEntry? _server;
@@ -70,6 +70,11 @@ public partial class RemoteWindow : CardWindow
             catch (Exception ex) { Log.Write("smb connect", ex); }
             await Open(RemoteSources.SmbRoot(_server));
         }
+        else if (_server.Kind == "webdav")
+        {
+            try { await Open(RemoteSources.WebDavStart(_server)); }
+            catch (UriFormatException) { CardDialog.Show("주소가 올바르지 않습니다", _server.Host, MessageKind.Error); }
+        }
         else
         {
             await Open(string.IsNullOrWhiteSpace(_server.Path) ? "/" : "/" + _server.Path.Trim('/'));
@@ -82,12 +87,15 @@ public partial class RemoteWindow : CardWindow
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
         StatusText.Text = "불러오는 중…";
-        PathText.Text = path;
+        PathText.Text = _server.Kind == "webdav" ? Uri.UnescapeDataString(path) : path;
         try
         {
-            var items = _server.Kind == "smb"
-                ? await RemoteSources.ListSmbAsync(path, cts.Token)
-                : await RemoteSources.ListFtpAsync(_server, path, cts.Token);
+            var items = _server.Kind switch
+            {
+                "smb" => await RemoteSources.ListSmbAsync(path, cts.Token),
+                "webdav" => await RemoteSources.ListWebDavAsync(_server, path, cts.Token),
+                _ => await RemoteSources.ListFtpAsync(_server, path, cts.Token),
+            };
             if (cts.IsCancellationRequested) return;
             _path = path;
             ItemList.ItemsSource = items;
@@ -114,6 +122,13 @@ public partial class RemoteWindow : CardWindow
             // \\서버 까지는 올라가지 않는다 (공유 목록은 볼 수 없음).
             if (!string.IsNullOrEmpty(parent) && parent.TrimStart('\\').Contains('\\')) await Open(parent);
         }
+        else if (_server.Kind == "webdav")
+        {
+            var cur = new Uri(_path);
+            var parent = new Uri(cur, "..").AbsoluteUri;
+            // 서버에 적은 기준 주소보다 위로는 올라가지 않는다.
+            if (parent.Length >= RemoteSources.WebDavBase(_server).AbsoluteUri.Length && parent != _path) await Open(parent);
+        }
         else if (_path != "/")
         {
             var parent = _path.TrimEnd('/');
@@ -122,8 +137,12 @@ public partial class RemoteWindow : CardWindow
         }
     }
 
-    private string Location(RemoteItem item) =>
-        _server!.Kind == "smb" ? item.Location : RemoteSources.FtpUrl(_server, item.Location);
+    private string Location(RemoteItem item) => _server!.Kind switch
+    {
+        "smb" => item.Location,
+        "webdav" => RemoteSources.WebDavPlayUrl(_server, item.Location),
+        _ => RemoteSources.FtpUrl(_server, item.Location),
+    };
 
     private async void ItemList_DoubleClick(object sender, MouseButtonEventArgs e)
     {

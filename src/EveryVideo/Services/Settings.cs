@@ -9,19 +9,21 @@ public enum RepeatMode { None, One, All }
 public sealed class ServerEntry
 {
     public string Name { get; set; } = "";
-    /// <summary>"ftp" 또는 "smb"</summary>
+    /// <summary>"ftp", "smb", "webdav"</summary>
     public string Kind { get; set; } = "ftp";
     public string Host { get; set; } = "";
     public int Port { get; set; }
     public string User { get; set; } = "";
     public string Password { get; set; } = "";
-    /// <summary>FTP: 시작 폴더, SMB: 공유 이름과 폴더 (예: Videos/Movies)</summary>
+    /// <summary>FTP: 시작 폴더, SMB: 공유 이름과 폴더 (예: Videos/Movies), WebDAV: 기준 주소 아래 시작 폴더</summary>
     public string Path { get; set; } = "";
 
     [JsonIgnore]
     public string Display => string.IsNullOrWhiteSpace(Name) ? $"{Kind.ToUpperInvariant()} · {Host}" : Name;
     [JsonIgnore]
-    public string Detail => $"{Kind.ToUpperInvariant()}  {Host}{(Port > 0 ? ":" + Port : "")}/{Path.TrimStart('/')}";
+    public string Detail => Kind == "webdav"
+        ? $"WEBDAV  {Host.TrimEnd('/')}/{Path.TrimStart('/')}"
+        : $"{Kind.ToUpperInvariant()}  {Host}{(Port > 0 ? ":" + Port : "")}/{Path.TrimStart('/')}";
 }
 
 /// <summary>앱 설정. %AppData%\EveryVideo\settings.json 에 저장된다.</summary>
@@ -48,6 +50,8 @@ public sealed class Settings
     public bool CheckUpdates { get; set; } = true;
     public string? SkippedVersion { get; set; }
     public bool HardwareDecoding { get; set; } = true;
+    /// <summary>다시 열 때 마지막으로 보던 곳부터 재생할지.</summary>
+    public bool AutoResume { get; set; } = true;
     public string? CaptureFolder { get; set; }
     public string? VideoFolder { get; set; }
     public string? LastFolder { get; set; }
@@ -60,6 +64,9 @@ public sealed class Settings
 
     public string CaptureDir => EnsureDir(CaptureFolder,
         System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "EveryVideo"));
+
+    public static string DownloadDir => EnsureDir(null,
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "EveryVideo"));
 
     public string VideoDir => EnsureDir(VideoFolder,
         System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "EveryVideo"));

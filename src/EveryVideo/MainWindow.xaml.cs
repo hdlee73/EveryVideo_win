@@ -140,6 +140,7 @@ public partial class MainWindow : Window
         _clickTimer.Tick += (_, _) => { _clickTimer.Stop(); TogglePlay(); };
         SidePanelMenu.IsChecked = _settings.ShowSidePanel;
         HwMenu.IsChecked = _settings.HardwareDecoding;
+        ResumeMenu.IsChecked = _settings.AutoResume;
         VolumeSlider.Value = _settings.Volume;
         BrightnessSlider.Value = _settings.Brightness;
         ContrastSlider.Value = _settings.Contrast;
@@ -393,7 +394,7 @@ public partial class MainWindow : Window
             _segments.Clear();
         }
         EndPanel.Visibility = Visibility.Collapsed;
-        _pendingSeek = startMs ?? (_settings.Resume.TryGetValue(key, out var r) ? r : null);
+        _pendingSeek = startMs ?? (_settings.AutoResume && _settings.Resume.TryGetValue(key, out var r) ? r : null);
         if (startMs == null && _pendingSeek != null)
             ShowOsd($"이어서 재생 {TimeFormat.Format(_pendingSeek.Value)}  (Home: 처음부터)", 3);
 
@@ -497,7 +498,11 @@ public partial class MainWindow : Window
         else AddAndPlay(files);
     }
 
-    private void OpenUrl_Click(object sender, RoutedEventArgs e)
+    private void OpenUrl_Click(object sender, RoutedEventArgs e) => AskUrl(false);
+
+    private void DownloadUrl_Click(object sender, RoutedEventArgs e) => AskUrl(true);
+
+    private void AskUrl(bool download)
     {
         var clip = "";
         try
@@ -512,9 +517,13 @@ public partial class MainWindow : Window
         {
             // 클립보드를 못 읽어도 괜찮다.
         }
-        var url = CardDialog.Prompt("주소 · 공유 링크 열기",
-            "http(s), m3u8, rtsp, ftp://, smb://, \\\\서버\\공유 주소나 구글 드라이브 공유 링크를 붙여 넣으세요.",
-            clip, null, "재생");
+        var url = download
+            ? CardDialog.Prompt("주소에서 내려받기",
+                $"동영상 파일 주소나 동영상이 있는 웹 페이지 주소를 넣으세요. 웹 페이지면 안의 동영상 링크를 찾아 보여줍니다.\n저장 위치: {Settings.DownloadDir}",
+                clip, null, "내려받기")
+            : CardDialog.Prompt("주소 · 공유 링크 열기",
+                "http(s), m3u8, rtsp, ftp://, smb://, \\\\서버\\공유 주소나 구글 드라이브 공유 링크를 붙여 넣으세요. 웹 페이지 주소를 넣으면 페이지 안의 동영상 링크를 찾아 보여줍니다.",
+                clip, null, "열기");
         if (string.IsNullOrWhiteSpace(url)) return;
         var loc = RemoteSources.Normalize(url);
         if (RemoteSources.IsDriveLink(url) && !loc.Contains("usercontent"))
@@ -522,7 +531,74 @@ public partial class MainWindow : Window
             CardDialog.Show("구글 드라이브", "링크에서 파일 ID 를 찾지 못했습니다. 파일의 공유 링크(…/file/d/…)를 넣어 주세요.", MessageKind.Error);
             return;
         }
-        AddAndPlay(new[] { loc });
+        if (WebMedia.IsDirectMedia(loc))
+        {
+            if (download) DownloadLinks(new[] { WebMedia.LinkOf(loc) });
+            else AddAndPlay(new[] { loc });
+            return;
+        }
+        _ = FindLinksAsync(loc, download);
+    }
+
+    /// <summary>웹 페이지에서 동영상 링크를 찾아 고르게 한다.</summary>
+    private async Task FindLinksAsync(string page, bool download)
+    {
+        ShowOsd("웹 페이지에서 동영상 링크를 찾는 중…", 20);
+        List<WebLink> links;
+        try
+        {
+            links = await WebMedia.FindAsync(page, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Log.Write("web links", ex, page);
+            HideOsd();
+            if (CardDialog.Show("웹 페이지를 읽지 못했습니다", $"{page}\n\n{ex.Message}\n\n주소를 그대로 재생해 볼 수 있습니다.",
+                    MessageKind.Error, "그대로 재생", "닫기") == 0)
+                AddAndPlay(new[] { page });
+            return;
+        }
+        HideOsd();
+        if (links.Count == 0)
+        {
+            if (CardDialog.Show("동영상 링크가 없습니다",
+                    "이 페이지에서 동영상 파일 주소를 찾지 못했습니다. 스트리밍 사이트는 영상을 숨겨 두는 경우가 많아요.\n\n주소를 그대로 재생해 볼까요?",
+                    MessageKind.Info, "그대로 재생", "닫기") == 0)
+                AddAndPlay(new[] { page });
+            return;
+        }
+        var d = new LinksWindow(links, page, download) { Owner = this };
+        if (d.ShowDialog() != true) return;
+        if (d.Action == LinkAction.Download) DownloadLinks(d.Selected);
+        else AddAndPlay(d.Selected.Select(l => l.Url).ToArray());
+    }
+
+    private void DownloadLinks(IReadOnlyList<WebLink> links)
+    {
+        var files = links.Where(l => !l.Streaming).ToList();
+        if (files.Count == 0)
+        {
+            CardDialog.Show("내려받을 수 없는 주소",
+                "m3u8·mpd 같은 스트리밍 주소는 조각난 파일이라 그대로 내려받을 수 없습니다. 재생한 뒤 '구간 저장'으로 원하는 부분을 저장하세요.");
+            return;
+        }
+        var saved = new List<string>();
+        var dir = Settings.DownloadDir;
+        var ok = ProgressWindow.Run("내려받는 중", files.Count == 1 ? files[0].Name : $"{files.Count}개 파일", async (progress, ct) =>
+        {
+            for (var i = 0; i < files.Count; i++)
+            {
+                var index = i;
+                var p = new Progress<double>(v => progress.Report((index + v) / files.Count));
+                saved.Add(await WebMedia.DownloadAsync(files[i].Url, dir, p, ct));
+            }
+        });
+        if (!ok && saved.Count == 0) return;
+        var choice = CardDialog.Show("내려받기 완료",
+            string.Join("\n", saved.Select(Path.GetFileName)) + $"\n\n저장 위치: {dir}",
+            MessageKind.Info, "재생", "폴더 열기", "닫기");
+        if (choice == 0) AddAndPlay(saved.ToArray());
+        else if (choice == 1) AppInfo.OpenUrl(dir);
     }
 
     private void GoogleDrive_Click(object sender, RoutedEventArgs e)
@@ -1037,6 +1113,13 @@ public partial class MainWindow : Window
             {
                 var server = _settings.Servers.FirstOrDefault(s => s.Kind == "ftp" && s.Host.Equals(u.Host, StringComparison.OrdinalIgnoreCase));
                 if (server != null) loc = RemoteSources.FtpUrl(server, Uri.UnescapeDataString(u.AbsolutePath));
+            }
+            // WebDAV 도 등록된 서버의 계정을 다시 넣는다.
+            else if (loc.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                var dav = _settings.Servers.FirstOrDefault(s => s.Kind == "webdav" &&
+                    loc.StartsWith(RemoteSources.WebDavBase(s).GetLeftPart(UriPartial.Authority), StringComparison.OrdinalIgnoreCase));
+                if (dav != null) loc = RemoteSources.WebDavPlayUrl(dav, loc);
             }
             _playlist.Add(new PlayItem(loc));
             idx = _playlist.Count - 1;
@@ -1825,6 +1908,8 @@ public partial class MainWindow : Window
     private void OpenCaptureFolder_Click(object sender, RoutedEventArgs e) => AppInfo.OpenUrl(_settings.CaptureDir);
     private void OpenVideoFolder_Click(object sender, RoutedEventArgs e) => AppInfo.OpenUrl(_settings.VideoDir);
 
+    private void OpenDownloadFolder_Click(object sender, RoutedEventArgs e) => AppInfo.OpenUrl(Settings.DownloadDir);
+
     private void ChangeFolders_Click(object sender, RoutedEventArgs e)
     {
         var c = CardDialog.Show("저장 위치",
@@ -1879,6 +1964,13 @@ public partial class MainWindow : Window
     }
 
     private void Topmost_Click(object sender, RoutedEventArgs e) => Topmost = TopmostMenu.IsChecked;
+
+    private void Resume_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.AutoResume = ResumeMenu.IsChecked;
+        _settings.Save();
+        ShowOsd(_settings.AutoResume ? "이어서 재생: 켜짐" : "이어서 재생: 꺼짐 (항상 처음부터)");
+    }
 
     private void Hw_Click(object sender, RoutedEventArgs e)
     {
@@ -1960,6 +2052,12 @@ public partial class MainWindow : Window
     }
 
     // ================= 안내 글 =================
+
+    private void HideOsd()
+    {
+        _osdTimer.Stop();
+        Osd.Visibility = Visibility.Collapsed;
+    }
 
     private void ShowOsd(string text, double seconds = 1.6)
     {
