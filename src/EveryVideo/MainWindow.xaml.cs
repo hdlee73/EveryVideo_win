@@ -102,6 +102,8 @@ public partial class MainWindow : Window
     private long _length;
     private long? _pendingSeek;
     private bool _seekDragging;
+    private long _seekHoldTarget;
+    private DateTime _seekHoldUntil;
     private float _rate = 1f;
     private long _abA = -1, _abB = -1;
     private bool _fullscreen;
@@ -792,6 +794,7 @@ public partial class MainWindow : Window
             return;
         }
         if (_abA >= 0 && _abB > _abA && t >= _abB) _mp.Time = _abA;
+        if (DateTime.Now < _seekHoldUntil && Math.Abs(t - _seekHoldTarget) > 1500) return;
         if (!_seekDragging && t >= 0)
         {
             SeekSlider.Value = Math.Min(t, SeekSlider.Maximum);
@@ -839,6 +842,7 @@ public partial class MainWindow : Window
         var t = ClampToAB(Math.Clamp(_mp.Time + deltaMs, 0, Math.Max(0, _length - 500)));
         _mp.Time = t;
         SeekSlider.Value = t;
+        HoldSeekBar(t);
         ShowOsd($"{(deltaMs > 0 ? "▶▶" : "◀◀")} {TimeFormat.Format(t)} / {TimeFormat.Format(_length)}");
     }
 
@@ -856,14 +860,31 @@ public partial class MainWindow : Window
         _mp.Time = Math.Clamp(ms, 0, Math.Max(0, _length - 200));
         SeekSlider.Value = ms;
         TimeText.Text = TimeFormat.Format(ms);
+        HoldSeekBar(ms);
+    }
+
+    /// <summary>이동 직후 LibVLC 가 아직 옛 시각을 알려 줘도 막대가 되돌아가 보이지 않게 잠깐 붙잡아 둔다.</summary>
+    private void HoldSeekBar(long ms)
+    {
+        _seekHoldTarget = ms;
+        _seekHoldUntil = DateTime.Now.AddMilliseconds(1500);
     }
 
     // ---- 시간 막대 + 미리보기 ----
 
+    /// <summary>
+    /// 마우스 위치의 재생 시각. Track.ValueFromPoint 는 "지금 Value + 마지막 배치 때 손잡이 위치로부터의 거리" 로 계산해서,
+    /// 클릭으로 Slider 가 Value 를 막 바꾼 직후(아직 다시 배치되기 전)에는 엉뚱한 값을 준다. 막대 폭만으로 계산한다.
+    /// </summary>
     private long TrackValue(MouseEventArgs e)
     {
+        if (_length <= 0) return 0;
         if (SeekSlider.Template.FindName("PART_Track", SeekSlider) is not Track track) return (long)SeekSlider.Value;
-        return (long)Math.Clamp(track.ValueFromPoint(e.GetPosition(track)), 0, Math.Max(0, _length));
+        var thumb = track.Thumb?.ActualWidth ?? 14;
+        var usable = track.ActualWidth - thumb;
+        if (usable <= 0) return 0;
+        var f = Math.Clamp((e.GetPosition(track).X - thumb / 2) / usable, 0, 1);
+        return (long)(f * _length);
     }
 
     private void Seek_MouseDown(object sender, MouseButtonEventArgs e)
@@ -925,9 +946,7 @@ public partial class MainWindow : Window
             return;
         }
         if (_length <= 0 || _seekDragging) return;
-        if (SeekSlider.Template.FindName("PART_Track", SeekSlider) is not Track track) return;
-        var ms = (long)Math.Clamp(track.ValueFromPoint(e.GetPosition(track)), 0, _length);
-        ShowPreview(ms, e.GetPosition(SeekSlider).X);
+        ShowPreview(TrackValue(e), e.GetPosition(SeekSlider).X);
     }
 
     private void Seek_MouseLeave(object sender, MouseEventArgs e)
