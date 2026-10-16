@@ -75,7 +75,8 @@ jobs:
           $log = Join-Path $env:APPDATA "EveryVideo\log.txt"
           $plugins = "dist\EveryVideo\libvlc\win-x64\plugins"
           foreach ($run in 1, 2) {
-            $p = Start-Process -FilePath "dist\EveryVideo\EveryVideo.exe" -ArgumentList "`"$env:RUNNER_TEMP\test.mp4`"" -PassThru
+            $snapArgs = if ($run -eq 1) { " --snapshot `"$env:RUNNER_TEMP\ui.png`"" } else { "" }
+            $p = Start-Process -FilePath "dist\EveryVideo\EveryVideo.exe" -ArgumentList "`"$env:RUNNER_TEMP\test.mp4`"$snapArgs" -PassThru
             Start-Sleep -Seconds 12
             if ($p.HasExited) { if (Test-Path $log) { Get-Content $log }; Write-Error "EveryVideo exited early (code $($p.ExitCode))"; exit 1 }
             $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -89,6 +90,13 @@ jobs:
             Write-Error "EveryVideo logged a startup error"; exit 1
           }
           if (-not (Select-String -Path $log -Pattern "playing test.mp4" -Quiet)) { Write-Error "test.mp4 did not play"; exit 1 }
+          # 화면 모습 확인용: 창 그림을 작은 JPEG 로 바꿔 로그에 남긴다 (UISHOT: 줄을 이어 붙여 base64 디코딩).
+          if (Test-Path "$env:RUNNER_TEMP\ui.png") {
+            & "dist\EveryVideo\ffmpeg\ffmpeg.exe" -hide_banner -loglevel error -y -i "$env:RUNNER_TEMP\ui.png" -q:v 5 "$env:RUNNER_TEMP\ui.jpg"
+            $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:RUNNER_TEMP\ui.jpg"))
+            for ($i = 0; $i -lt $b64.Length; $i += 4000) { Write-Host ("UISHOT:" + $b64.Substring($i, [Math]::Min(4000, $b64.Length - $i))) }
+            Write-Host "UISHOT-END"
+          }
           # 캐시는 받는 PC 에서 처음 실행할 때 만든다(파일 시각이 PC 마다 달라서).
           Remove-Item "$plugins\plugins.dat", "$plugins\plugins.ver" -ErrorAction SilentlyContinue
 

@@ -102,6 +102,8 @@ public partial class MainWindow : Window
     private long _length;
     private long? _pendingSeek;
     private bool _seekDragging;
+    private long _seekHoldTarget;
+    private DateTime _seekHoldUntil;
     private float _rate = 1f;
     private long _abA = -1, _abB = -1;
     private bool _fullscreen;
@@ -124,9 +126,12 @@ public partial class MainWindow : Window
     {
         _startupArgs = args;
         InitializeComponent();
-        Width = Math.Max(MinWidth, _settings.WindowWidth);
-        Height = Math.Max(MinHeight, _settings.WindowHeight);
-        if (Math.Abs(_settings.SidePanelWidth - 300) < 0.5) _settings.SidePanelWidth = 260; // 예전 기본 너비는 너무 넓었다.
+        // 새 화면(작업 도구형)은 도구 패널이 있어 예전 기본 크기보다 넓게 연다. 사용자가 바꾼 크기는 그대로 둔다.
+        if (Math.Abs(_settings.WindowWidth - 1180) < 0.5 && Math.Abs(_settings.WindowHeight - 720) < 0.5)
+            (_settings.WindowWidth, _settings.WindowHeight) = (1320, 820);
+        if (Math.Abs(_settings.SidePanelWidth - 260) < 0.5) _settings.SidePanelWidth = 300;
+        Width = Math.Min(Math.Max(MinWidth, _settings.WindowWidth), SystemParameters.WorkArea.Width);
+        Height = Math.Min(Math.Max(MinHeight, _settings.WindowHeight), SystemParameters.WorkArea.Height);
         PlaylistBox.ItemsSource = _playlist;
         SegmentBox.ItemsSource = _segments;
         ListHelpers.EnableDragReorder(PlaylistBox, _playlist, RecomputeCurrent);
@@ -157,6 +162,7 @@ public partial class MainWindow : Window
         PreviewKeyDown += OnKey;
         Drop += Window_Drop;
         MarkerCanvas.SizeChanged += (_, _) => RebuildMarkers();
+        TickGrid.SizeChanged += (_, _) => PlaceTicks();
         BookmarkStore.Changed += () => Dispatcher.BeginInvoke(RefreshBookmarks);
     }
 
@@ -167,6 +173,8 @@ public partial class MainWindow : Window
         HookVideoHost();
         _tick.Start();
         // 목록은 바로 채우고, 재생은 엔진이 준비되면 시작한다.
+        var snap = Array.IndexOf(_startupArgs, "--snapshot");
+        if (snap >= 0 && snap + 1 < _startupArgs.Length) _ = SnapshotAsync(_startupArgs[snap + 1]);
         var files = _startupArgs.Where(a => File.Exists(a) || Directory.Exists(a) || RemoteSources.IsUrl(a)).ToList();
         if (files.Count > 0) AddAndPlay(ExpandPaths(files));
 
@@ -241,6 +249,27 @@ public partial class MainWindow : Window
             Task.Delay(100).ContinueWith(_ => Dispatcher.BeginInvoke(() => HookVideoHost(attempt + 1)));
     }
 
+    /// <summary>CI 확인용: 몇 초 뒤 창 모습을 그림 파일로 남긴다 (동영상 칸은 검게 나온다).</summary>
+    private async Task SnapshotAsync(string path)
+    {
+        await Task.Delay(9000);
+        try
+        {
+            var root = (FrameworkElement)Content;
+            var rtb = new RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(root);
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(rtb));
+            using var f = File.Create(path);
+            enc.Save(f);
+            Log.Write("snapshot", null, path);
+        }
+        catch (Exception ex)
+        {
+            Log.Write("snapshot", ex);
+        }
+    }
+
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         _closing = true;
@@ -253,6 +282,7 @@ public partial class MainWindow : Window
         _settings.Save();
         _tick.Stop();
         _thumbCts.Cancel();
+        _filmCts?.Cancel();
 
         // 창은 바로 감추고, 재생 엔진 정리는 뒤에서 한다. 정리가 늦어져도 기다리지 않는다.
         Hide();
@@ -282,6 +312,8 @@ public partial class MainWindow : Window
     private async Task CheckUpdateAtStartupAsync()
     {
         if (!_settings.CheckUpdates) return;
+        // 개발용 빌드(x.y.z-dev.N)는 같은 번호의 정식판을 "새 버전" 으로 보므로 시작할 때 알리지 않는다.
+        if (AppInfo.Version.Contains("-dev")) return;
         await Task.Delay(2500);
         var latest = await UpdateChecker.GetLatestAsync();
         if (latest == null || !UpdateChecker.IsNewer(latest.Version, AppInfo.Version)) return;
@@ -374,6 +406,7 @@ public partial class MainWindow : Window
 
         // 새 동영상 상태로 초기화
         _length = 0;
+        ClearFilmStrip();
         _abA = _abB = -1;
         UpdateAB();
         _zoom = 1;
@@ -415,6 +448,7 @@ public partial class MainWindow : Window
 
         EmptyPanel.Visibility = Visibility.Collapsed;
         Title = $"{item.Name} - EveryVideo";
+        TitleText.Text = item.Name;
         if (!RemoteSources.IsUrl(item.Location) || !item.Location.Contains("@"))
         {
             _settings.AddRecent(item.Location);
@@ -762,6 +796,8 @@ public partial class MainWindow : Window
     {
         _length = 0;
         Title = "EveryVideo";
+        TitleText.Text = "";
+        ClearFilmStrip();
         EmptyPanel.Visibility = Visibility.Visible;
         RefreshBookmarks();
     }
@@ -782,6 +818,8 @@ public partial class MainWindow : Window
             SeekSlider.Maximum = len;
             DurationText.Text = TimeFormat.Format(len);
             RebuildMarkers();
+            BuildTicks();
+            LoadFilmStrip();
         }
         var t = _mp.Time;
         if (t > 0) _lastTime = t;
@@ -792,6 +830,7 @@ public partial class MainWindow : Window
             return;
         }
         if (_abA >= 0 && _abB > _abA && t >= _abB) _mp.Time = _abA;
+        if (DateTime.Now < _seekHoldUntil && Math.Abs(t - _seekHoldTarget) > 1500) return;
         if (!_seekDragging && t >= 0)
         {
             SeekSlider.Value = Math.Min(t, SeekSlider.Maximum);
@@ -839,6 +878,7 @@ public partial class MainWindow : Window
         var t = ClampToAB(Math.Clamp(_mp.Time + deltaMs, 0, Math.Max(0, _length - 500)));
         _mp.Time = t;
         SeekSlider.Value = t;
+        HoldSeekBar(t);
         ShowOsd($"{(deltaMs > 0 ? "▶▶" : "◀◀")} {TimeFormat.Format(t)} / {TimeFormat.Format(_length)}");
     }
 
@@ -856,14 +896,31 @@ public partial class MainWindow : Window
         _mp.Time = Math.Clamp(ms, 0, Math.Max(0, _length - 200));
         SeekSlider.Value = ms;
         TimeText.Text = TimeFormat.Format(ms);
+        HoldSeekBar(ms);
+    }
+
+    /// <summary>이동 직후 LibVLC 가 아직 옛 시각을 알려 줘도 막대가 되돌아가 보이지 않게 잠깐 붙잡아 둔다.</summary>
+    private void HoldSeekBar(long ms)
+    {
+        _seekHoldTarget = ms;
+        _seekHoldUntil = DateTime.Now.AddMilliseconds(1500);
     }
 
     // ---- 시간 막대 + 미리보기 ----
 
+    /// <summary>
+    /// 마우스 위치의 재생 시각. Track.ValueFromPoint 는 "지금 Value + 마지막 배치 때 손잡이 위치로부터의 거리" 로 계산해서,
+    /// 클릭으로 Slider 가 Value 를 막 바꾼 직후(아직 다시 배치되기 전)에는 엉뚱한 값을 준다. 막대 폭만으로 계산한다.
+    /// </summary>
     private long TrackValue(MouseEventArgs e)
     {
+        if (_length <= 0) return 0;
         if (SeekSlider.Template.FindName("PART_Track", SeekSlider) is not Track track) return (long)SeekSlider.Value;
-        return (long)Math.Clamp(track.ValueFromPoint(e.GetPosition(track)), 0, Math.Max(0, _length));
+        var thumb = track.Thumb?.ActualWidth ?? 14;
+        var usable = track.ActualWidth - thumb;
+        if (usable <= 0) return 0;
+        var f = Math.Clamp((e.GetPosition(track).X - thumb / 2) / usable, 0, 1);
+        return (long)(f * _length);
     }
 
     private void Seek_MouseDown(object sender, MouseButtonEventArgs e)
@@ -925,9 +982,7 @@ public partial class MainWindow : Window
             return;
         }
         if (_length <= 0 || _seekDragging) return;
-        if (SeekSlider.Template.FindName("PART_Track", SeekSlider) is not Track track) return;
-        var ms = (long)Math.Clamp(track.ValueFromPoint(e.GetPosition(track)), 0, _length);
-        ShowPreview(ms, e.GetPosition(SeekSlider).X);
+        ShowPreview(TrackValue(e), e.GetPosition(SeekSlider).X);
     }
 
     private void Seek_MouseLeave(object sender, MouseEventArgs e)
@@ -977,12 +1032,7 @@ public partial class MainWindow : Window
                 if (_thumbs.ContainsKey(k)) continue;
                 var bytes = await Ffmpeg.FrameAsync(location, k * ThumbBucket + ThumbBucket / 2, 192, ct);
                 if (bytes == null || ct.IsCancellationRequested) continue;
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.StreamSource = new MemoryStream(bytes);
-                bmp.EndInit();
-                bmp.Freeze();
+                var bmp = ToBitmap(bytes);
                 if (_thumbs.Count > 500) _thumbs.Clear();
                 _thumbs[k] = bmp;
                 if (_thumbHover == k || _thumbWanted == null) PreviewImage.Source = bmp;
@@ -1013,11 +1063,11 @@ public partial class MainWindow : Window
             var b = _abB > _abA ? X(_abB) : a + 2;
             var band = new Rectangle
             {
-                Width = Math.Max(2, b - a), Height = 8, RadiusX = 2, RadiusY = 2, IsHitTestVisible = false,
-                Fill = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xB3, 0x00)),
+                Width = Math.Max(2, b - a), Height = 6, RadiusX = 2, RadiusY = 2, IsHitTestVisible = false,
+                Fill = new SolidColorBrush(Color.FromArgb(0xEE, 0x2D, 0x7F, 0xF9)),
             };
             Canvas.SetLeft(band, a);
-            Canvas.SetTop(band, 13);
+            Canvas.SetTop(band, MarkerCanvas.ActualHeight - 6);
             MarkerCanvas.Children.Add(band);
         }
 
@@ -1025,13 +1075,16 @@ public partial class MainWindow : Window
         foreach (var seg in _segments)
         {
             var a = X(seg.Start);
+            // 필름 위의 구간: 체크하면 주황 테두리, 아니면 회색 테두리
             var rect = new Rectangle
             {
-                Width = Math.Max(2, X(seg.End) - a), Height = 14, RadiusX = 3, RadiusY = 3,
-                Fill = new SolidColorBrush(seg.Checked ? Color.FromArgb(0x99, 0x4F, 0xC3, 0xF7) : Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
+                Width = Math.Max(4, X(seg.End) - a), Height = SegmentCanvas.ActualHeight, RadiusX = 6, RadiusY = 6,
+                StrokeThickness = 3,
+                Stroke = new SolidColorBrush(seg.Checked ? Color.FromRgb(0xFF, 0xB0, 0x20) : Color.FromRgb(0xB9, 0xC1, 0xCC)),
+                Fill = new SolidColorBrush(seg.Checked ? Color.FromArgb(0x2E, 0xFF, 0xB0, 0x20) : Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)),
             };
             Canvas.SetLeft(rect, a);
-            Canvas.SetTop(rect, 10);
+            Canvas.SetTop(rect, 0);
             SegmentCanvas.Children.Add(rect);
         }
 
@@ -1048,7 +1101,7 @@ public partial class MainWindow : Window
             var pos = bm.PositionMs;
             mark.MouseLeftButtonDown += (_, e) => { SeekTo(pos); e.Handled = true; };
             Canvas.SetLeft(mark, X(pos) - 5);
-            Canvas.SetTop(mark, 0);
+            Canvas.SetTop(mark, -9);
             MarkerCanvas.Children.Add(mark);
         }
     }
@@ -1160,7 +1213,7 @@ public partial class MainWindow : Window
     private void UpdateAB()
     {
         ABButton.Content = _abA < 0 ? "A-B" : _abB < 0 ? "A-…" : "A-B ✓";
-        ABButton.Foreground = (Brush)FindResource(_abA < 0 ? "Text" : "Accent");
+        ABButton.Foreground = (Brush)FindResource(_abA < 0 ? "Text" : "Brand");
         RebuildMarkers();
     }
 
@@ -1184,7 +1237,7 @@ public partial class MainWindow : Window
     private void UpdateRepeatButton()
     {
         RepeatButton.Tag = FindResource(_settings.Repeat == RepeatMode.One ? "IcRepeatOne" : "IcRepeat");
-        RepeatButton.Foreground = (Brush)FindResource(_settings.Repeat == RepeatMode.None ? "TextDim" : "Accent");
+        RepeatButton.Foreground = (Brush)FindResource(_settings.Repeat == RepeatMode.None ? "TextDim" : "Brand");
         RepeatButton.ToolTip = _settings.Repeat switch
         {
             RepeatMode.All => "전체 반복 (L)",
@@ -1554,6 +1607,8 @@ public partial class MainWindow : Window
             _prevState = WindowState;
             _prevBounds = new Rect(Left, Top, Width, Height);
             TopMenu.Visibility = Visibility.Collapsed;
+            Rail.Visibility = Visibility.Collapsed;
+            VideoFrame.Margin = new Thickness(0);
             // 패널 칸의 최소 너비까지 0 으로 해야 전체화면에서 오른쪽 띠가 남지 않는다.
             UpdateSidePanelVisibility();
             ControlsHost.Child = null;
@@ -1576,6 +1631,8 @@ public partial class MainWindow : Window
             ControlsHost.Child = ControlBar;
             ControlsHost.Visibility = Visibility.Visible;
             TopMenu.Visibility = Visibility.Visible;
+            Rail.Visibility = Visibility.Visible;
+            VideoFrame.Margin = new Thickness(14, 14, 14, 0);
             UpdateSidePanelVisibility();
             WindowStyle = WindowStyle.SingleBorderWindow;
             ResizeMode = ResizeMode.CanResize;
@@ -1783,11 +1840,12 @@ public partial class MainWindow : Window
         var x2 = 7 + w * Math.Max(a, b) / _length;
         var rect = new Rectangle
         {
-            Width = Math.Max(2, x2 - x1), Height = 14, RadiusX = 3, RadiusY = 3,
-            Fill = new SolidColorBrush(Color.FromArgb(0xAA, 0x4F, 0xC3, 0xF7)),
+            Width = Math.Max(2, x2 - x1), Height = SegmentCanvas.ActualHeight, RadiusX = 6, RadiusY = 6,
+            StrokeThickness = 3, Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0xB0, 0x20)),
+            Fill = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xB0, 0x20)),
         };
         Canvas.SetLeft(rect, x1);
-        Canvas.SetTop(rect, 10);
+        Canvas.SetTop(rect, 0);
         SegmentCanvas.Children.Add(rect);
     }
 
@@ -1931,6 +1989,108 @@ public partial class MainWindow : Window
     {
         if (_fullscreen) ToggleFullscreen();
         SetSidePanel(!_settings.ShowSidePanel);
+    }
+
+    // ---- 왼쪽 아이콘 줄 ----
+
+    private void RailSegments_Click(object sender, RoutedEventArgs e) => ShowSideTab(SegmentTab);
+    private void RailPlaylist_Click(object sender, RoutedEventArgs e) => ShowSideTab(PlaylistTab);
+    private void RailBookmarks_Click(object sender, RoutedEventArgs e) => ShowSideTab(BookmarkTab);
+
+    /// <summary>옆 패널의 탭을 연다. 이미 그 탭이 열려 있으면 패널을 닫는다.</summary>
+    private void ShowSideTab(RadioButton tab)
+    {
+        if (_settings.ShowSidePanel && tab.IsChecked == true) { SetSidePanel(false); return; }
+        if (!_settings.ShowSidePanel) SetSidePanel(true);
+        tab.IsChecked = true;
+    }
+
+    // ---- 필름 타임라인 ----
+
+    private const int FilmFrames = 16;
+    private CancellationTokenSource? _filmCts;
+
+    private void ClearFilmStrip()
+    {
+        _filmCts?.Cancel();
+        _filmCts = null;
+        FilmStrip.Children.Clear();
+        TickGrid.Children.Clear();
+    }
+
+    /// <summary>재생 막대 아래 장면 그림을 ffmpeg 로 몇 장 뽑아 채운다. 다른 동영상으로 바뀌면 멈춘다.</summary>
+    private async void LoadFilmStrip()
+    {
+        _filmCts?.Cancel();
+        FilmStrip.Children.Clear();
+        if (!Ffmpeg.Available || CurrentItem == null || _length <= 0) return;
+        var cts = _filmCts = new CancellationTokenSource();
+        var location = CurrentItem.Location;
+        var len = _length;
+        var images = new Image[FilmFrames];
+        for (var i = 0; i < FilmFrames; i++)
+        {
+            images[i] = new Image { Stretch = Stretch.UniformToFill };
+            FilmStrip.Children.Add(new Border
+            {
+                Child = images[i], ClipToBounds = true,
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)),
+                BorderThickness = new Thickness(i == 0 ? 0 : 1, 0, 0, 0),
+            });
+        }
+        try
+        {
+            for (var i = 0; i < FilmFrames && !cts.IsCancellationRequested; i++)
+            {
+                var bytes = await Ffmpeg.FrameAsync(location, len * (2 * i + 1) / (2 * FilmFrames), 160, cts.Token);
+                if (bytes == null || cts.IsCancellationRequested) continue;
+                images[i].Source = ToBitmap(bytes);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Log.Write("film", ex);
+        }
+    }
+
+    private static BitmapImage ToBitmap(byte[] bytes)
+    {
+        var bmp = new BitmapImage();
+        bmp.BeginInit();
+        bmp.CacheOption = BitmapCacheOption.OnLoad;
+        bmp.StreamSource = new MemoryStream(bytes);
+        bmp.EndInit();
+        bmp.Freeze();
+        return bmp;
+    }
+
+    /// <summary>필름 아래 시각 눈금 (처음, 끝, 그 사이 6칸). 가운데 눈금은 글자 가운데를 비율 위치에 맞춘다.</summary>
+    private void BuildTicks()
+    {
+        TickGrid.Children.Clear();
+        if (_length <= 0) return;
+        const int parts = 7;
+        for (var i = 0; i <= parts; i++)
+        {
+            TickGrid.Children.Add(new TextBlock
+            {
+                Text = TimeFormat.Format(_length * i / parts), FontSize = 10.5, Tag = (double)i / parts,
+                Foreground = (Brush)FindResource("TextDim"),
+                HorizontalAlignment = i == parts ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+            });
+        }
+        PlaceTicks();
+    }
+
+    private void PlaceTicks()
+    {
+        foreach (var tb in TickGrid.Children.OfType<TextBlock>())
+        {
+            if (tb.Tag is not double f || f <= 0 || f >= 1) continue;
+            tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            tb.Margin = new Thickness(Math.Max(0, TickGrid.ActualWidth * f - tb.DesiredSize.Width / 2), 0, 0, 0);
+        }
     }
 
     private void SetSidePanel(bool show)
