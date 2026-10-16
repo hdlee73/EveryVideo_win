@@ -100,11 +100,22 @@ public sealed class Settings
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), Json) ?? new Settings();
+            {
+                var text = File.ReadAllText(FilePath);
+                var parsed = JsonSerializer.Deserialize<Settings>(text, Json);
+                if (parsed != null) return parsed;
+            }
         }
         catch (Exception e)
         {
             Log.Write("settings load", e);
+            // 깨진 설정은 덮어쓰기 전에 백업해 둔다.
+            try
+            {
+                var bak = FilePath + ".bak";
+                if (File.Exists(FilePath)) File.Copy(FilePath, bak, true);
+            }
+            catch { }
         }
         return new Settings();
     }
@@ -116,7 +127,13 @@ public sealed class Settings
             Directory.CreateDirectory(DataDir);
             var tmp = FilePath + ".tmp";
             File.WriteAllText(tmp, JsonSerializer.Serialize(this, Json));
-            File.Move(tmp, FilePath, true);
+            try { File.Move(tmp, FilePath, true); }
+            catch
+            {
+                // 백신 등이 잠깐 잠그면 재시도
+                Thread.Sleep(100);
+                File.Move(tmp, FilePath, true);
+            }
         }
         catch (Exception e)
         {

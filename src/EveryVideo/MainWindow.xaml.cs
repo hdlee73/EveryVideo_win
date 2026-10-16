@@ -284,13 +284,16 @@ public partial class MainWindow : Window
         _thumbCts.Cancel();
         _filmCts?.Cancel();
 
-        // 창은 바로 감추고, 재생 엔진 정리는 뒤에서 한다. 정리가 늦어져도 기다리지 않는다.
+        // 창은 바로 감추고, 재생 엔진 정리는 뒤에서 한다. UI 스레드를 막지 않는다.
+        // 기존 cleanup.Wait(1500)은 닫힐 때 UI를 얼리고 Dispatcher 콜백과 데드락을 유발했다.
         Hide();
         var mp = _mp;
         var vlc = _vlc;
         _mp = null;
         try { VideoView.MediaPlayer = null; } catch { }
-        var cleanup = Task.Run(() =>
+        // 화면 녹화 창이 열려 있으면 녹화가 끝날 때까지 앱을 남겨 둔다.
+        var keepAlive = _recorder is { IsLoaded: true };
+        _ = Task.Run(() =>
         {
             try
             {
@@ -302,11 +305,13 @@ public partial class MainWindow : Window
             {
                 Log.Write("close", ex);
             }
+            Log.Write("closed");
+            if (!keepAlive) Environment.Exit(0);
         });
-        cleanup.Wait(1500);
-        Log.Write("closed", null, cleanup.IsCompleted ? "" : "engine cleanup timed out");
-        // 화면 녹화 창이 열려 있으면 녹화가 끝날 때까지 앱을 남겨 둔다.
-        if (_recorder is not { IsLoaded: true }) Environment.Exit(0);
+        if (keepAlive) return;
+        // 정리 태스크가 끝날 때까지 기다리지 않고 바로 종료한다.
+        // (기존처럼 Wait(1500)으로 UI 스레드를 막으면 종료가 늦어지고 데드락 위험)
+        Environment.Exit(0);
     }
 
     private async Task CheckUpdateAtStartupAsync()
@@ -807,8 +812,8 @@ public partial class MainWindow : Window
     private void OnTick()
     {
         if (_mp == null) return;
-        // 시간 막대 밖에서 버튼을 놓아 MouseUp 을 못 받은 경우
-        if (_seekDragging && Mouse.LeftButton == MouseButtonState.Released) Seek_MouseUp(this, null!);
+        // 시간 막대 밖에서 버튼을 놓아 MouseUp 을 못 받은 경우 (e=null 대신 직접 마무리)
+        if (_seekDragging && Mouse.LeftButton == MouseButtonState.Released) FinishSeekDrag();
         var playing = _mp.IsPlaying;
         PlayButton.Tag = FindResource(playing ? "IcPause" : "IcPlay");
         var len = _mp.Length;
@@ -912,8 +917,9 @@ public partial class MainWindow : Window
     /// 마우스 위치의 재생 시각. Track.ValueFromPoint 는 "지금 Value + 마지막 배치 때 손잡이 위치로부터의 거리" 로 계산해서,
     /// 클릭으로 Slider 가 Value 를 막 바꾼 직후(아직 다시 배치되기 전)에는 엉뚱한 값을 준다. 막대 폭만으로 계산한다.
     /// </summary>
-    private long TrackValue(MouseEventArgs e)
+    private long TrackValue(MouseEventArgs? e)
     {
+        if (e == null) return (long)SeekSlider.Value;
         if (_length <= 0) return 0;
         if (SeekSlider.Template.FindName("PART_Track", SeekSlider) is not Track track) return (long)SeekSlider.Value;
         var thumb = track.Thumb?.ActualWidth ?? 14;
@@ -942,18 +948,23 @@ public partial class MainWindow : Window
         _lastLiveSeek = DateTime.MinValue;
     }
 
-    private void Seek_MouseUp(object sender, MouseButtonEventArgs e)
+    private void Seek_MouseUp(object sender, MouseButtonEventArgs? e)
     {
         if (_segmentDragStart is long start)
         {
             _segmentDragStart = null;
             SeekSlider.ReleaseMouseCapture();
-            var end = TrackValue(e);
+            var end = e == null ? (long)SeekSlider.Value : TrackValue(e);
             if (Math.Abs(end - start) >= 300) AddSegment(start, end);
             RebuildMarkers();
             return;
         }
         if (!_seekDragging) return;
+        FinishSeekDrag();
+    }
+
+    private void FinishSeekDrag()
+    {
         _seekDragging = false;
         SeekTo((long)SeekSlider.Value);
         if (!SeekSlider.IsMouseOver) PreviewPopup.IsOpen = false;

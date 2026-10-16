@@ -55,12 +55,14 @@ public static partial class Ffmpeg
         return psi;
     }
 
-    /// <summary>ffmpeg 를 실행하고 끝날 때까지 기다린다. progress 는 0~1.</summary>
+    /// <summary>ffmpeg 를 실행하고 끝날 때까지 기다린다. progress 는 0~1 (200ms 또는 1% 이상 변할 때만 보고).</summary>
     public static async Task<(int code, string log)> RunAsync(IEnumerable<string> args, long totalMs,
         IProgress<double>? progress, CancellationToken ct)
     {
         using var p = new Process { StartInfo = StartInfo(args) };
         var log = new StringBuilder();
+        var lastReport = 0.0;
+        var lastReportTime = DateTime.UtcNow;
         p.ErrorDataReceived += (_, e) =>
         {
             if (e.Data == null) return;
@@ -73,7 +75,17 @@ public static partial class Ffmpeg
             {
                 var m = TimeRegex().Match(e.Data);
                 if (m.Success && TimeSpan.TryParse(m.Groups[1].Value, CultureInfo.InvariantCulture, out var t))
-                    progress.Report(Math.Clamp(t.TotalMilliseconds / totalMs, 0, 1));
+                {
+                    var v = Math.Clamp(t.TotalMilliseconds / totalMs, 0, 1);
+                    var now = DateTime.UtcNow;
+                    // UI 스레드 폭주를 막기 위해 스로틀링
+                    if (v - lastReport >= 0.01 || (now - lastReportTime).TotalMilliseconds >= 200 || v >= 1.0)
+                    {
+                        lastReport = v;
+                        lastReportTime = now;
+                        progress.Report(v);
+                    }
+                }
             }
         };
         p.Start();
@@ -199,7 +211,7 @@ public static partial class Ffmpeg
         if (fast)
         {
             var list = Path.Combine(Path.GetTempPath(), $"everyvideo_concat_{Guid.NewGuid():N}.txt");
-            await File.WriteAllLinesAsync(list, inputs.Select(i => $"file '{i.Replace("'", "'\\''")}'"), ct);
+            await File.WriteAllLinesAsync(list, inputs.Select(i => $"file '{EscapeConcatPath(i)}'"), ct);
             try
             {
                 var (code, log) = await RunAsync(new[] { "-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy",
@@ -415,10 +427,18 @@ public static partial class Ffmpeg
     /// <summary>필터 안에 쓰는 경로: 역슬래시는 / 로, : 는 \: 로</summary>
     private static string FilterPath(string path) => path.Replace('\\', '/').Replace(":", "\\:").Replace("'", "\\'");
 
+    /// <summary>concat demuxer list.txt용 경로: / 로 통일하고 ' 는 '\'' 로 이스케이프</summary>
+    private static string EscapeConcatPath(string path) =>
+        path.Replace('\\', '/').Replace("'", "'\\''");
+
     /// <summary>지정 시점의 작은 그림(JPEG)을 만든다. 탐색 미리보기용.</summary>
     public static async Task<byte[]?> FrameAsync(string input, long ms, int width, CancellationToken ct)
     {
         if (!Available) return null;
+        // 미리보기 프로세스가 쌓이지 않도록 15초 타임아웃
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(15));
+        var linked = timeout.Token;
         using var p = new Process
         {
             StartInfo = StartInfo(new[]
@@ -433,8 +453,8 @@ public static partial class Ffmpeg
         using var ms2 = new MemoryStream();
         try
         {
-            await p.StandardOutput.BaseStream.CopyToAsync(ms2, ct);
-            await p.WaitForExitAsync(ct);
+            await p.StandardOutput.BaseStream.CopyToAsync(ms2, linked);
+            await p.WaitForExitAsync(linked);
         }
         catch (OperationCanceledException)
         {
