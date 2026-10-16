@@ -284,6 +284,8 @@ public partial class MainWindow : Window
     private async Task CheckUpdateAtStartupAsync()
     {
         if (!_settings.CheckUpdates) return;
+        // 개발용 빌드(x.y.z-dev.N)는 같은 번호의 정식판을 "새 버전" 으로 보므로 시작할 때 알리지 않는다.
+        if (AppInfo.Version.Contains("-dev")) return;
         await Task.Delay(2500);
         var latest = await UpdateChecker.GetLatestAsync();
         if (latest == null || !UpdateChecker.IsNewer(latest.Version, AppInfo.Version)) return;
