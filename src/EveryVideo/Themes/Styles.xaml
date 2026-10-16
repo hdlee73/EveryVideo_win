@@ -2,21 +2,24 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EveryVideo">
 
-    <!-- 색 (안드로이드 앱의 재생 화면 색과 맞춤: 산뜻한 하늘빛 파랑 + 중립 그래파이트) -->
+    <!-- 색: 밝은 작업 도구형 테마 (화면 틀은 밝게, 동영상과 필름 타임라인만 어둡게) -->
     <Color x:Key="BrandColor">#FF2D7FF9</Color>
     <SolidColorBrush x:Key="Brand" Color="{StaticResource BrandColor}" />
     <SolidColorBrush x:Key="BrandLight" Color="#FF5C9BFF" />
     <SolidColorBrush x:Key="Accent" Color="#FFFFB020" />
     <SolidColorBrush x:Key="Danger" Color="#FFE5484D" />
-    <SolidColorBrush x:Key="WindowBg" Color="#FF0F1114" />
-    <SolidColorBrush x:Key="PanelBg" Color="#FF16181C" />
-    <SolidColorBrush x:Key="CardBg" Color="#FF1D2026" />
-    <SolidColorBrush x:Key="CardHigh" Color="#FF262A31" />
-    <SolidColorBrush x:Key="RowHover" Color="#14FFFFFF" />
-    <SolidColorBrush x:Key="RowSelected" Color="#402D7FF9" />
-    <SolidColorBrush x:Key="Line" Color="#1FFFFFFF" />
-    <SolidColorBrush x:Key="Text" Color="#FFECEEF2" />
-    <SolidColorBrush x:Key="TextDim" Color="#FF9BA3B0" />
+    <SolidColorBrush x:Key="WindowBg" Color="#FFEEF0F3" />
+    <SolidColorBrush x:Key="PanelBg" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="CardBg" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="CardHigh" Color="#FFF1F3F6" />
+    <SolidColorBrush x:Key="BrandSoft" Color="#FFE8F0FE" />
+    <SolidColorBrush x:Key="AccentSoft" Color="#FFFFF8EA" />
+    <SolidColorBrush x:Key="FilmBg" Color="#FF2A2F38" />
+    <SolidColorBrush x:Key="RowHover" Color="#0F1D2430" />
+    <SolidColorBrush x:Key="RowSelected" Color="#FFE8F0FE" />
+    <SolidColorBrush x:Key="Line" Color="#FFDDE1E7" />
+    <SolidColorBrush x:Key="Text" Color="#FF1D2430" />
+    <SolidColorBrush x:Key="TextDim" Color="#FF6B7686" />
 
     <FontFamily x:Key="UiFont">Malgun Gothic, Segoe UI</FontFamily>
 
@@ -103,7 +106,7 @@
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource RowHover}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="ic" Property="Fill" Value="{StaticResource Accent}" />
+                            <Setter TargetName="ic" Property="Fill" Value="{StaticResource Brand}" />
                             <Setter TargetName="bd" Property="Background" Value="{StaticResource RowSelected}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -118,7 +121,7 @@
         <Setter Property="Height" Value="36" />
         <Setter Property="Padding" Value="16,0" />
         <Setter Property="Margin" Value="6,0,0,0" />
-        <Setter Property="Foreground" Value="{StaticResource BrandLight}" />
+        <Setter Property="Foreground" Value="{StaticResource Brand}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Cursor" Value="Hand" />
@@ -292,7 +295,7 @@
                                 <RepeatButton Style="{StaticResource FlatRepeat}" Background="{StaticResource Brand}" Command="Slider.DecreaseLarge" />
                             </Track.DecreaseRepeatButton>
                             <Track.IncreaseRepeatButton>
-                                <RepeatButton Style="{StaticResource FlatRepeat}" Background="#33FFFFFF" Command="Slider.IncreaseLarge" />
+                                <RepeatButton Style="{StaticResource FlatRepeat}" Background="{StaticResource Line}" Command="Slider.IncreaseLarge" />
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
                                 <Thumb Style="{StaticResource SliderThumb}" />
@@ -322,7 +325,7 @@
         </Style.Triggers>
     </Style>
 
-    <!-- 옆 패널 탭 -->
+    <!-- 옆 패널 탭: 밑줄 탭 -->
     <Style x:Key="TabRadio" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource TextDim}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -330,23 +333,136 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="bd" Background="Transparent" CornerRadius="16">
+                    <Border x:Name="bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="0,0,0,2">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{StaticResource RowHover}" />
+                            <Setter Property="Foreground" Value="{StaticResource Text}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{StaticResource Brand}" />
-                            <Setter Property="Foreground" Value="White" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brand}" />
+                            <Setter Property="Foreground" Value="{StaticResource Text}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
-
+    <!-- 왼쪽 아이콘 줄 버튼: Tag 에 아이콘, Content 에 이름 -->
+    <Style x:Key="RailButton" TargetType="Button">
+        <Setter Property="Width" Value="52" />
+        <Setter Property="Height" Value="54" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Foreground" Value="#FF5C6676" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="10">
+                        <StackPanel VerticalAlignment="Center">
+                            <Viewbox Width="20" Height="20" HorizontalAlignment="Center">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Fill="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                                </Canvas>
+                            </Viewbox>
+                            <ContentPresenter HorizontalAlignment="Center" Margin="0,3,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource BrandSoft}" />
+                            <Setter Property="Foreground" Value="{StaticResource Brand}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- 오른쪽 패널의 도구 버튼: 아이콘 + 글자, 회색 바탕 -->
+    <Style x:Key="ToolButton" TargetType="Button">
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Foreground" Value="{StaticResource Text}" />
+        <Setter Property="Background" Value="{StaticResource CardHigh}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="10">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="18" Height="18" Margin="0,0,7,0">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Fill="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                                </Canvas>
+                            </Viewbox>
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource BrandSoft}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="ToolPrimaryButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Background" Value="{StaticResource Brand}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- 필름 타임라인 위의 재생 위치: 투명한 막대 + 파란 세로선 손잡이 (폭 14 는 MarkerCanvas 계산과 맞춤) -->
+    <Style x:Key="TimelineThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Width="14" Background="Transparent">
+                        <Rectangle Width="2" Fill="{StaticResource Brand}" Margin="0,-6" />
+                        <Polygon Points="0,-8 14,-8 7,1" Fill="{StaticResource Brand}" HorizontalAlignment="Center" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="TimelineRepeat" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="{TemplateBinding Background}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="TimelineSlider" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource TimelineRepeat}" Background="#262D7FF9" Command="Slider.DecreaseLarge" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource TimelineRepeat}" Background="Transparent" Command="Slider.IncreaseLarge" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource TimelineThumb}" />
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style TargetType="ToolTip">
         <Setter Property="Background" Value="{StaticResource CardHigh}" />
         <Setter Property="Foreground" Value="{StaticResource Text}" />
@@ -383,12 +499,12 @@
                     <Border Margin="16" Background="{StaticResource CardBg}" CornerRadius="18"
                             BorderBrush="{StaticResource Line}" BorderThickness="1">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="22" ShadowDepth="4" Opacity="0.55" />
+                            <DropShadowEffect BlurRadius="22" ShadowDepth="4" Opacity="0.22" />
                         </Border.Effect>
                         <DockPanel>
                             <Grid x:Name="PART_Title" DockPanel.Dock="Top" Background="Transparent" Height="52">
                                 <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
-                                    <Path Data="{TemplateBinding CardIcon}" Fill="{StaticResource BrandLight}" Width="20" Height="20"
+                                    <Path Data="{TemplateBinding CardIcon}" Fill="{StaticResource Brand}" Width="20" Height="20"
                                           Stretch="Uniform" Margin="0,0,10,0" x:Name="ic" />
                                     <TextBlock Text="{TemplateBinding Title}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 </StackPanel>

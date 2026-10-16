@@ -46,7 +46,7 @@ public sealed class Settings
     public int Saturation { get; set; }
     public RepeatMode Repeat { get; set; } = RepeatMode.All;
     public bool ShowSidePanel { get; set; } = true;
-    public double SidePanelWidth { get; set; } = 260;
+    public double SidePanelWidth { get; set; } = 300;
     public bool CheckUpdates { get; set; } = true;
     public string? SkippedVersion { get; set; }
     public bool HardwareDecoding { get; set; } = true;
@@ -59,8 +59,8 @@ public sealed class Settings
     public List<ServerEntry> Servers { get; set; } = new();
     /// <summary>파일별 마지막 재생 위치 (ms). 이어서 재생에 쓴다.</summary>
     public Dictionary<string, long> Resume { get; set; } = new();
-    public double WindowWidth { get; set; } = 1180;
-    public double WindowHeight { get; set; } = 720;
+    public double WindowWidth { get; set; } = 1320;
+    public double WindowHeight { get; set; } = 820;
 
     public string CaptureDir => EnsureDir(CaptureFolder,
         System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "EveryVideo"));
