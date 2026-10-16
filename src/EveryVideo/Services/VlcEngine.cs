@@ -13,7 +13,11 @@ namespace EveryVideo.Services;
 public static class VlcEngine
 {
     private static string PluginDir => Path.Combine(AppContext.BaseDirectory, "libvlc", "win-x64", "plugins");
-    private static string StampPath => Path.Combine(PluginDir, "plugins.ver");
+    // 설치 폴더(Program Files)는 쓰기 권한이 없을 수 있어 스탬프는 AppData에 둔다.
+    // 기존에 설치 폴더에 있던 스탬프도 읽어서 불필요한 --reset-plugins-cache를 피한다.
+    private static string StampPath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EveryVideo", "plugins.ver");
+    private static string LegacyStampPath => Path.Combine(PluginDir, "plugins.ver");
 
     public static Task<LibVLC> CreateAsync(bool hardwareDecoding) => Task.Run(() =>
     {
@@ -33,8 +37,12 @@ public static class VlcEngine
         var vlc = new LibVLC(args.ToArray());
         if (rebuild)
         {
-            try { File.WriteAllText(StampPath, stamp); }
-            catch { /* 설치 폴더에 쓸 수 없으면 캐시 없이 쓴다. */ }
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(StampPath)!);
+                File.WriteAllText(StampPath, stamp);
+            }
+            catch { /* 캐시 스탬프를 못 써도 재생은 된다. */ }
         }
         Log.Write("engine ready", null, $"{sw.ElapsedMilliseconds} ms{(rebuild ? " (plugins cache rebuilt)" : "")}");
         return vlc;
@@ -59,9 +67,12 @@ public static class VlcEngine
     {
         try
         {
-            return File.Exists(Path.Combine(PluginDir, "plugins.dat"))
-                   && File.Exists(StampPath)
-                   && File.ReadAllText(StampPath) == stamp;
+            // AppData 또는 예전 위치(설치 폴더) 중 하나라도 맞으면 캐시가 유효하다.
+            if (File.Exists(StampPath) && File.ReadAllText(StampPath) == stamp)
+                return File.Exists(Path.Combine(PluginDir, "plugins.dat"));
+            if (File.Exists(LegacyStampPath) && File.ReadAllText(LegacyStampPath) == stamp)
+                return File.Exists(Path.Combine(PluginDir, "plugins.dat"));
+            return false;
         }
         catch
         {

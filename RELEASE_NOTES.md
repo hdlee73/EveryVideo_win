@@ -1,4 +1,15 @@
-EveryVideo for Windows v0.2.1
+EveryVideo for Windows v0.2.2
+
+안정화 + 새 아이콘
+- 앱 아이콘을 새 디자인(A안: 그라데이션 + 흰 재생 버튼)으로 교체
+- 끌 때 UI가 얼던 문제 수정 (엔진 정리 비동기화, 데드락 제거)
+- 시간 막대 밖에서 놓을 때 생기던 오류 수정
+- ffmpeg 진행률 보고 스로틀링 (UI 끊김 완화), 탐색 미리보기 15초 타임아웃
+- 이어붙이기 공백·한글·작은따옴표 경로 실패 수정
+- LibVLC 부품 캐시 스탬프를 AppData로 이동 (Program Files 권한 없어도 두 번째 실행부터 빠르게)
+- 깨진 settings.json 백업(.bak) 후 초기화, 저장 재시도
+
+설치: `EveryVideo-x.y.z-setup.exe` 실행 / 설치 없이 쓰려면 `…-portable.zip` 을 풀어 `EveryVideo.exe` 실행
 
 설치: `EveryVideo-x.y.z-setup.exe` 실행 / 설치 없이 쓰려면 `…-portable.zip` 을 풀어 `EveryVideo.exe` 실행
 
