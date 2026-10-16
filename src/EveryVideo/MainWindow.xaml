@@ -119,7 +119,7 @@
             </Border>
 
             <!-- 가운데: 동영상 + 조작 줄 + 필름 타임라인 -->
-            <DockPanel Grid.Column="1">
+            <DockPanel Grid.Column="1" Background="{StaticResource WindowBg}">
                 <Border x:Name="ControlsHost" DockPanel.Dock="Bottom">
                     <StackPanel x:Name="ControlBar" Margin="14,8,14,14">
                         <!-- 재생 조작 줄 -->

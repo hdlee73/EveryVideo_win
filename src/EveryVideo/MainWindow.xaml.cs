@@ -2021,7 +2021,8 @@ public partial class MainWindow : Window
     /// <summary>재생 막대 아래 장면 그림을 ffmpeg 로 몇 장 뽑아 채운다. 다른 동영상으로 바뀌면 멈춘다.</summary>
     private async void LoadFilmStrip()
     {
-        ClearFilmStrip();
+        _filmCts?.Cancel();
+        FilmStrip.Children.Clear();
         if (!Ffmpeg.Available || CurrentItem == null || _length <= 0) return;
         var cts = _filmCts = new CancellationTokenSource();
         var location = CurrentItem.Location;
