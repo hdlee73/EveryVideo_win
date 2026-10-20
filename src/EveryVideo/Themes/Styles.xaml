@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EveryVideo">
 
-    <!-- 색: 밝은 작업 도구형 테마 (화면 틀은 밝게, 동영상과 필름 타임라인만 어둡게) -->
+    <!-- 색: 밝은 작업 도구형 테마 (화면 틀은 밝게, 동영상만 어둡게) -->
     <Color x:Key="BrandColor">#FF2D7FF9</Color>
     <SolidColorBrush x:Key="Brand" Color="{StaticResource BrandColor}" />
     <SolidColorBrush x:Key="BrandLight" Color="#FF5C9BFF" />
@@ -14,7 +14,6 @@
     <SolidColorBrush x:Key="CardHigh" Color="#FFF1F3F6" />
     <SolidColorBrush x:Key="BrandSoft" Color="#FFE8F0FE" />
     <SolidColorBrush x:Key="AccentSoft" Color="#FFFFF8EA" />
-    <SolidColorBrush x:Key="FilmBg" Color="#FF2A2F38" />
     <SolidColorBrush x:Key="RowHover" Color="#0F1D2430" />
     <SolidColorBrush x:Key="RowSelected" Color="#FFE8F0FE" />
     <SolidColorBrush x:Key="Line" Color="#FFDDE1E7" />
@@ -418,14 +417,13 @@
         <Setter Property="Background" Value="{StaticResource Brand}" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
-    <!-- 필름 타임라인 위의 재생 위치: 투명한 막대 + 파란 세로선 손잡이 (폭 14 는 MarkerCanvas 계산과 맞춤) -->
+    <!-- 시간 막대: 가는 회색 막대 위에 재생한 만큼 파란 막대 + 둥근 손잡이 (폭 14 는 MarkerCanvas 계산과 맞춤) -->
     <Style x:Key="TimelineThumb" TargetType="Thumb">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Grid Width="14" Background="Transparent">
-                        <Rectangle Width="2" Fill="{StaticResource Brand}" Margin="0,-6" />
-                        <Polygon Points="0,-8 14,-8 7,1" Fill="{StaticResource Brand}" HorizontalAlignment="Center" />
+                        <Ellipse Width="14" Height="14" Fill="{StaticResource Brand}" Stroke="White" StrokeThickness="2" VerticalAlignment="Center" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -436,7 +434,9 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
-                    <Border Background="{TemplateBinding Background}" />
+                    <Grid Background="Transparent">
+                        <Border Background="{TemplateBinding Background}" Height="6" CornerRadius="3" VerticalAlignment="Center" />
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -449,7 +449,7 @@
                     <Grid Background="Transparent">
                         <Track x:Name="PART_Track">
                             <Track.DecreaseRepeatButton>
-                                <RepeatButton Style="{StaticResource TimelineRepeat}" Background="#262D7FF9" Command="Slider.DecreaseLarge" />
+                                <RepeatButton Style="{StaticResource TimelineRepeat}" Background="{StaticResource Brand}" Margin="7,0,0,0" Command="Slider.DecreaseLarge" />
                             </Track.DecreaseRepeatButton>
                             <Track.IncreaseRepeatButton>
                                 <RepeatButton Style="{StaticResource TimelineRepeat}" Background="Transparent" Command="Slider.IncreaseLarge" />
