@@ -118,7 +118,7 @@
                 </DockPanel>
             </Border>
 
-            <!-- 가운데: 동영상 + 조작 줄 + 필름 타임라인 -->
+            <!-- 가운데: 동영상 + 조작 줄 + 시간 막대 -->
             <DockPanel Grid.Column="1" Background="{StaticResource WindowBg}">
                 <Border x:Name="ControlsHost" DockPanel.Dock="Bottom">
                     <StackPanel x:Name="ControlBar" Margin="14,8,14,14">
@@ -161,14 +161,12 @@
                             </WrapPanel>
                         </DockPanel>
 
-                        <!-- 필름 타임라인: 장면 그림 위를 누르거나 끌어 이동, Shift+끌기로 구간 추가 -->
+                        <!-- 시간 막대: 누르거나 끌어 이동, Shift+끌기로 구간 추가. 장면 그림은 마우스를 올리거나 끌 때만 위에 뜬다 -->
                         <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="12"
-                                Padding="12,12,12,6" Margin="0,8,0,0">
+                                Padding="12,8,12,6" Margin="0,8,0,0">
                             <StackPanel>
-                                <Grid x:Name="SeekArea" Height="58">
-                                    <Border Background="{StaticResource FilmBg}" CornerRadius="8" Margin="7,0" ClipToBounds="True">
-                                        <UniformGrid x:Name="FilmStrip" Rows="1" />
-                                    </Border>
+                                <Grid x:Name="SeekArea" Height="30">
+                                    <Border Background="{StaticResource CardHigh}" CornerRadius="3" Height="6" Margin="7,0" VerticalAlignment="Center" />
                                     <Canvas x:Name="SegmentCanvas" ClipToBounds="False" IsHitTestVisible="False" />
                                     <Slider x:Name="SeekSlider" Style="{StaticResource TimelineSlider}" Maximum="1" SmallChange="1000" LargeChange="10000"
                                             MouseMove="Seek_MouseMove" MouseLeave="Seek_MouseLeave" ValueChanged="Seek_ValueChanged" />
@@ -246,7 +244,7 @@
                         <StackPanel DockPanel.Dock="Top">
                             <TextBlock Text="저장할 구간" FontSize="14" FontWeight="SemiBold" />
                             <TextBlock x:Name="SegmentHint" Margin="0,3,0,10" TextWrapping="Wrap" Foreground="{StaticResource TextDim}" FontSize="12"
-                                       Text="필름에서 Shift 를 누른 채 끌거나, A-B 를 고른 뒤 '구간 추가'를 누르세요. 체크한 구간을 한꺼번에 저장하거나 지울 수 있습니다." />
+                                       Text="시간 막대에서 Shift 를 누른 채 끌거나, A-B 를 고른 뒤 '구간 추가'를 누르세요. 체크한 구간을 한꺼번에 저장하거나 지울 수 있습니다." />
                         </StackPanel>
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
                             <UniformGrid Columns="2">

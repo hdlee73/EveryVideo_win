@@ -282,7 +282,6 @@ public partial class MainWindow : Window
         _settings.Save();
         _tick.Stop();
         _thumbCts.Cancel();
-        _filmCts?.Cancel();
 
         // 창은 바로 감추고, 재생 엔진 정리는 뒤에서 한다. UI 스레드를 막지 않는다.
         // 기존 cleanup.Wait(1500)은 닫힐 때 UI를 얼리고 Dispatcher 콜백과 데드락을 유발했다.
@@ -411,7 +410,7 @@ public partial class MainWindow : Window
 
         // 새 동영상 상태로 초기화
         _length = 0;
-        ClearFilmStrip();
+        ClearTicks();
         _abA = _abB = -1;
         UpdateAB();
         _zoom = 1;
@@ -802,7 +801,7 @@ public partial class MainWindow : Window
         _length = 0;
         Title = "EveryVideo";
         TitleText.Text = "";
-        ClearFilmStrip();
+        ClearTicks();
         EmptyPanel.Visibility = Visibility.Visible;
         RefreshBookmarks();
     }
@@ -824,7 +823,6 @@ public partial class MainWindow : Window
             DurationText.Text = TimeFormat.Format(len);
             RebuildMarkers();
             BuildTicks();
-            LoadFilmStrip();
         }
         var t = _mp.Time;
         if (t > 0) _lastTime = t;
@@ -1086,16 +1084,16 @@ public partial class MainWindow : Window
         foreach (var seg in _segments)
         {
             var a = X(seg.Start);
-            // 필름 위의 구간: 체크하면 주황 테두리, 아니면 회색 테두리
+            // 시간 막대 위의 구간: 체크하면 주황 테두리, 아니면 회색 테두리
             var rect = new Rectangle
             {
-                Width = Math.Max(4, X(seg.End) - a), Height = SegmentCanvas.ActualHeight, RadiusX = 6, RadiusY = 6,
-                StrokeThickness = 3,
+                Width = Math.Max(4, X(seg.End) - a), Height = SegmentBand, RadiusX = 4, RadiusY = 4,
+                StrokeThickness = 2,
                 Stroke = new SolidColorBrush(seg.Checked ? Color.FromRgb(0xFF, 0xB0, 0x20) : Color.FromRgb(0xB9, 0xC1, 0xCC)),
                 Fill = new SolidColorBrush(seg.Checked ? Color.FromArgb(0x2E, 0xFF, 0xB0, 0x20) : Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)),
             };
             Canvas.SetLeft(rect, a);
-            Canvas.SetTop(rect, 0);
+            Canvas.SetTop(rect, (SegmentCanvas.ActualHeight - SegmentBand) / 2);
             SegmentCanvas.Children.Add(rect);
         }
 
@@ -1842,6 +1840,9 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>시간 막대에 겹쳐 그리는 구간 띠의 높이</summary>
+    private const double SegmentBand = 16;
+
     private void DrawSegmentPreview(long a, long b)
     {
         RebuildMarkers();
@@ -1851,12 +1852,12 @@ public partial class MainWindow : Window
         var x2 = 7 + w * Math.Max(a, b) / _length;
         var rect = new Rectangle
         {
-            Width = Math.Max(2, x2 - x1), Height = SegmentCanvas.ActualHeight, RadiusX = 6, RadiusY = 6,
-            StrokeThickness = 3, Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0xB0, 0x20)),
+            Width = Math.Max(2, x2 - x1), Height = SegmentBand, RadiusX = 4, RadiusY = 4,
+            StrokeThickness = 2, Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0xB0, 0x20)),
             Fill = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xB0, 0x20)),
         };
         Canvas.SetLeft(rect, x1);
-        Canvas.SetTop(rect, 0);
+        Canvas.SetTop(rect, (SegmentCanvas.ActualHeight - SegmentBand) / 2);
         SegmentCanvas.Children.Add(rect);
     }
 
@@ -2016,54 +2017,9 @@ public partial class MainWindow : Window
         tab.IsChecked = true;
     }
 
-    // ---- 필름 타임라인 ----
+    // ---- 시간 눈금 ----
 
-    private const int FilmFrames = 16;
-    private CancellationTokenSource? _filmCts;
-
-    private void ClearFilmStrip()
-    {
-        _filmCts?.Cancel();
-        _filmCts = null;
-        FilmStrip.Children.Clear();
-        TickGrid.Children.Clear();
-    }
-
-    /// <summary>재생 막대 아래 장면 그림을 ffmpeg 로 몇 장 뽑아 채운다. 다른 동영상으로 바뀌면 멈춘다.</summary>
-    private async void LoadFilmStrip()
-    {
-        _filmCts?.Cancel();
-        FilmStrip.Children.Clear();
-        if (!Ffmpeg.Available || CurrentItem == null || _length <= 0) return;
-        var cts = _filmCts = new CancellationTokenSource();
-        var location = CurrentItem.Location;
-        var len = _length;
-        var images = new Image[FilmFrames];
-        for (var i = 0; i < FilmFrames; i++)
-        {
-            images[i] = new Image { Stretch = Stretch.UniformToFill };
-            FilmStrip.Children.Add(new Border
-            {
-                Child = images[i], ClipToBounds = true,
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(i == 0 ? 0 : 1, 0, 0, 0),
-            });
-        }
-        try
-        {
-            for (var i = 0; i < FilmFrames && !cts.IsCancellationRequested; i++)
-            {
-                var bytes = await Ffmpeg.FrameAsync(location, len * (2 * i + 1) / (2 * FilmFrames), 160, cts.Token);
-                if (bytes == null || cts.IsCancellationRequested) continue;
-                images[i].Source = ToBitmap(bytes);
-            }
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Log.Write("film", ex);
-        }
-    }
+    private void ClearTicks() => TickGrid.Children.Clear();
 
     private static BitmapImage ToBitmap(byte[] bytes)
     {
@@ -2076,7 +2032,7 @@ public partial class MainWindow : Window
         return bmp;
     }
 
-    /// <summary>필름 아래 시각 눈금 (처음, 끝, 그 사이 6칸). 가운데 눈금은 글자 가운데를 비율 위치에 맞춘다.</summary>
+    /// <summary>시간 막대 아래 시각 눈금 (처음, 끝, 그 사이 6칸). 가운데 눈금은 글자 가운데를 비율 위치에 맞춘다.</summary>
     private void BuildTicks()
     {
         TickGrid.Children.Clear();
