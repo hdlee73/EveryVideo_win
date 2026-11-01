@@ -145,14 +145,20 @@ public static class RemoteSources
             string.IsNullOrEmpty(s.User) ? "anonymous" : s.User,
             string.IsNullOrEmpty(s.User) ? "anonymous@" : s.Password,
             s.Port > 0 ? s.Port : 21);
+        var session = new FtpText.Session(s.Host, s.Port > 0 ? s.Port : 21, s.Encoding);
+        session.Configure(client);
         client.Config.EncryptionMode = FtpEncryptionMode.Auto;
         client.Config.ValidateAnyCertificate = true;
         client.Config.ConnectTimeout = 10000;
-        await client.AutoConnect(ct);
-        var items = await client.GetListing(string.IsNullOrEmpty(path) ? "/" : path, ct);
+        await client.Connect(ct);
+        // UTF-8 을 지원하는 서버는 UTF-8 로 바꿔 달라고 한다(지원하지 않으면 무시된다).
+        if (session.Mode != FtpText.Cp949) await client.Execute("OPTS UTF8 ON", ct);
+        var dir = await session.ResolveDirAsync(client, string.IsNullOrEmpty(path) ? "/" : path, ct);
+        var items = await client.GetListing(dir, ct);
+        session.Learn(items.Select(i => i.Name));
         return items
-            .Where(i => i.Type == FtpObjectType.Directory || (i.Type == FtpObjectType.File && IsMedia(i.Name)))
-            .Select(i => new RemoteItem(i.Name, i.FullName, i.Type == FtpObjectType.Directory, i.Size))
+            .Where(i => i.Type == FtpObjectType.Directory || (i.Type == FtpObjectType.File && IsMedia(session.Decode(i.Name))))
+            .Select(i => new RemoteItem(session.Decode(i.Name), session.Decode(i.FullName), i.Type == FtpObjectType.Directory, i.Size))
             .OrderByDescending(i => i.IsFolder).ThenBy(i => i.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }

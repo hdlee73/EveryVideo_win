@@ -17,6 +17,8 @@ public sealed class ServerEntry
     public string Password { get; set; } = "";
     /// <summary>FTP: 시작 폴더, SMB: 공유 이름과 폴더 (예: Videos/Movies), WebDAV: 기준 주소 아래 시작 폴더</summary>
     public string Path { get; set; } = "";
+    /// <summary>FTP 파일 이름 인코딩: "auto", "utf-8", "cp949"</summary>
+    public string Encoding { get; set; } = "auto";
 
     [JsonIgnore]
     public string Display => string.IsNullOrWhiteSpace(Name) ? $"{Kind.ToUpperInvariant()} · {Host}" : Name;

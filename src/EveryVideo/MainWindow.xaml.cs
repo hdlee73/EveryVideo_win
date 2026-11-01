@@ -437,11 +437,26 @@ public partial class MainWindow : Window
 
         try
         {
-            using var media = RemoteSources.IsUrl(item.Location)
-                ? new Media(_vlc, new Uri(item.Location))
-                : new Media(_vlc, item.Location, FromType.FromPath);
-            if (software) media.AddOption(":avcodec-hw=none");
-            _mp.Play(media);
+            StreamMediaInput? input = null;
+            Media media;
+            if (FtpText.NeedsOwnStream(item.Location))
+            {
+                // 한글 등 이름의 FTP 파일은 서버 인코딩(UTF-8/CP949)에 맞춰 앱이 직접 읽어 넘긴다.
+                input = new StreamMediaInput(new FtpReadStream(item.Location, FtpEncodingFor(item.Location)));
+                media = new Media(_vlc, input);
+            }
+            else
+            {
+                media = RemoteSources.IsUrl(item.Location)
+                    ? new Media(_vlc, new Uri(item.Location))
+                    : new Media(_vlc, item.Location, FromType.FromPath);
+            }
+            using (media)
+            {
+                if (software) media.AddOption(":avcodec-hw=none");
+                _mp.Play(media);
+            }
+            ReplaceMediaInput(input);
         }
         catch (Exception ex)
         {
@@ -459,6 +474,25 @@ public partial class MainWindow : Window
             _settings.Save();
         }
         RefreshBookmarks();
+    }
+
+    private StreamMediaInput? _mediaInput;
+
+    /// <summary>이전 파일의 FTP 스트림은 재생이 넘어간 뒤 뒤에서 닫는다.</summary>
+    private void ReplaceMediaInput(StreamMediaInput? input)
+    {
+        var old = _mediaInput;
+        _mediaInput = input;
+        if (old != null) Task.Run(() => { try { old.Dispose(); } catch { } });
+    }
+
+    private string FtpEncodingFor(string location)
+    {
+        if (!Uri.TryCreate(location, UriKind.Absolute, out var u)) return FtpText.Auto;
+        var server = _settings.Servers.FirstOrDefault(s => s.Kind == "ftp"
+            && s.Host.Equals(u.Host, StringComparison.OrdinalIgnoreCase)
+            && (s.Port > 0 ? s.Port : 21) == (u.Port > 0 ? u.Port : 21));
+        return server?.Encoding ?? FtpText.Auto;
     }
 
     private void OnError()

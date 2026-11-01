@@ -50,6 +50,18 @@
         <Button x:Name="DownloadButton" Content="새 버전 내려받기" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch"
                 Margin="0,10,0,0" Visibility="Collapsed" Click="Download_Click" />
 
+        <Border Background="{StaticResource CardHigh}" CornerRadius="12" Padding="16,12" Margin="0,10,0,0">
+            <StackPanel>
+                <TextBlock Text="사용 방법" FontWeight="SemiBold" />
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextDim}" Margin="0,6,0,0" LineHeight="20">
+                    • 파일을 끌어다 놓거나 열기·주소로 열기로 동영상을 고르면 바로 재생돼요.<LineBreak />
+                    • 재생 중 구간 저장·화면 캡쳐·이어붙이기·재생목록 도구를 쓸 수 있어요.<LineBreak />
+                    • 네트워크 서버에 FTP·SMB·WebDAV를 등록해 바로 재생해요. FTP 한글 이름이 깨지면 서버 고치기에서 인코딩을 CP949로 바꿔요.<LineBreak />
+                    • 새 버전은 시작할 때 자동으로 알려드려요.
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
         <CheckBox x:Name="AutoCheck" Content="시작할 때 새 버전이 있는지 확인하고 알려주기" Margin="2,12,0,0" />
 
         <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" Margin="2,12,0,0"
