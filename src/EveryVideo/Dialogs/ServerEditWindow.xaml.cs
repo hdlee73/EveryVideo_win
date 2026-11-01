@@ -20,6 +20,12 @@ public partial class ServerEditWindow : CardWindow
             PathBox.Text = existing.Path;
             UserBox.Text = existing.User;
             PassBox.Password = existing.Password;
+            EncodingCombo.SelectedIndex = FtpText.Normalize(existing.Encoding) switch
+            {
+                FtpText.Utf8 => 1,
+                FtpText.Cp949 => 2,
+                _ => 0,
+            };
         }
         FtpRadio.Checked += (_, _) => UpdateKind();
         SmbRadio.Checked += (_, _) => UpdateKind();
@@ -35,6 +41,7 @@ public partial class ServerEditWindow : CardWindow
         PathLabel.Text = smb ? "공유 이름/폴더 (예: Videos 또는 Videos/영화)" : "시작 폴더 (선택, 예: /movies)";
         HostLabel.Text = dav ? "주소 (예: https://nas.local:5006/dav)" : "주소 (IP 또는 이름)";
         PortBox.IsEnabled = !smb;
+        EncodingPanel.Visibility = FtpRadio.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -69,6 +76,8 @@ public partial class ServerEditWindow : CardWindow
             Path = PathBox.Text.Trim(),
             User = UserBox.Text.Trim(),
             Password = PassBox.Password,
+            Encoding = !smb && !dav && EncodingCombo.SelectedItem is System.Windows.Controls.ComboBoxItem { Tag: string enc }
+                ? enc : FtpText.Auto,
         };
         DialogResult = true;
     }

@@ -43,6 +43,14 @@
                 <PasswordBox x:Name="PassBox" />
             </StackPanel>
         </Grid>
+        <StackPanel x:Name="EncodingPanel">
+            <TextBlock Text="파일 이름 인코딩 (한글이 깨지면 CP949)" Style="{StaticResource Label}" />
+            <ComboBox x:Name="EncodingCombo" SelectedIndex="0">
+                <ComboBoxItem Content="자동 (UTF-8 / CP949 알아서)" Tag="auto" />
+                <ComboBoxItem Content="UTF-8" Tag="utf-8" />
+                <ComboBoxItem Content="CP949 (EUC-KR, 한국 NAS·공유기)" Tag="cp949" />
+            </ComboBox>
+        </StackPanel>
         <TextBlock x:Name="ErrorText" Foreground="{StaticResource Danger}" Margin="0,8,0,0" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="취소" Style="{StaticResource TextButton}" Click="Cancel_Click" />
