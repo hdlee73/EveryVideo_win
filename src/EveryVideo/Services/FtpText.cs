@@ -69,7 +69,9 @@ public static class FtpText
         }
 
         /// <summary>제어 연결 설정: Latin1 로 고정해 바이트를 그대로 주고받는다.</summary>
-        public void Configure(BaseFtpClient client) => client.Encoding = Latin1;
+        public void Configure(AsyncFtpClient client) => client.Encoding = Latin1;
+
+        public void Configure(FtpClient client) => client.Encoding = Latin1;
 
         /// <summary>유니코드 경로 → 서버로 보낼 문자열(바이트를 Latin1 로 담은 것).</summary>
         public string Encode(string path, Encoding? cs = null) => Latin1.GetString((cs ?? Charset).GetBytes(path));
