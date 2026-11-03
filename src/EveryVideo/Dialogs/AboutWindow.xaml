@@ -56,6 +56,8 @@
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextDim}" Margin="0,6,0,0" LineHeight="20">
                     • 파일을 끌어다 놓거나 열기·주소로 열기로 동영상을 고르면 바로 재생돼요.<LineBreak />
                     • 재생 중 구간 저장·화면 캡쳐·이어붙이기·재생목록 도구를 쓸 수 있어요.<LineBreak />
+                    • 화질 개선: 밝기 버튼에서 선명하게·노이즈 줄이기·업스케일을 켜면 재생에 바로 적용돼요. 구간 저장 창에서 '화질 개선 적용'으로 저장에도 넣을 수 있어요.<LineBreak />
+                    • AI 컬러화·업스케일: 구간·캡쳐 탭의 'AI 캡쳐'나 구간 저장 창의 'AI 컬러화'를 켜요. 처음 한 번 AI 모델을 내려받고, 그 뒤로는 PC 안에서 처리해요.<LineBreak />
                     • 네트워크 서버에 FTP·SMB·WebDAV를 등록해 바로 재생해요. FTP 한글 이름이 깨지면 서버 고치기에서 인코딩을 CP949로 바꿔요.<LineBreak />
                     • 새 버전은 시작할 때 자동으로 알려드려요.
                 </TextBlock>
@@ -65,7 +67,7 @@
         <CheckBox x:Name="AutoCheck" Content="시작할 때 새 버전이 있는지 확인하고 알려주기" Margin="2,12,0,0" />
 
         <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" Margin="2,12,0,0"
-                   Text="재생 엔진: LibVLC (LGPL) · 편집/녹화: FFmpeg (GPL). 각 라이선스는 설치 폴더에 함께 들어 있습니다." />
+                   Text="재생 엔진: LibVLC (LGPL) · 편집/녹화: FFmpeg (GPL) · AI: ONNX Runtime (MIT), 컬러화 모델 Zhang et al. SIGGRAPH17 (BSD-2), Real-ESRGAN (BSD-3). 각 라이선스는 설치 폴더에 함께 들어 있습니다." />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="닫기" Style="{StaticResource PrimaryButton}" IsDefault="True" Click="Close_Click" />

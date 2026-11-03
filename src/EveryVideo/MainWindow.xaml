@@ -254,6 +254,7 @@
                                 <Button Style="{StaticResource ToolButton}" Tag="{StaticResource IcAdd}" Content="구간 추가" Margin="4,0,0,8" ToolTip="A-B 로 고른 구간을 목록에 넣습니다 (Insert)" Click="AddSegment_Click" />
                                 <Button Style="{StaticResource ToolButton}" Tag="{StaticResource IcSave}" Content="한 구간 저장" Margin="0,0,4,8" ToolTip="S" Click="Clip_Click" />
                                 <Button Style="{StaticResource ToolButton}" Tag="{StaticResource IcDelete}" Content="구간 삭제" Margin="4,0,0,8" Click="DeleteRange_Click" />
+                                <Button Style="{StaticResource ToolButton}" Tag="{StaticResource IcCamera}" Content="AI 캡쳐" Margin="0,0,4,8" ToolTip="지금 장면을 AI 컬러화 · 4배 업스케일해 저장" Click="AiCapture_Click" />
                             </UniformGrid>
                             <Button Style="{StaticResource ToolPrimaryButton}" Tag="{StaticResource IcCut}" Content="체크한 구간 각각 저장" Click="SaveSegmentsEach_Click" />
                             <WrapPanel HorizontalAlignment="Center">
@@ -401,7 +402,22 @@
                         <TextBlock Text="채도" />
                     </DockPanel>
                     <Slider x:Name="SaturationSlider" Minimum="-100" Maximum="100" ValueChanged="Adjust_Changed" />
-                    <Button Content="원래대로" Style="{StaticResource TextButton}" HorizontalAlignment="Right" Margin="0,8,0,0" Click="AdjustReset_Click" />
+                    <Border Height="1" Background="{StaticResource Line}" Margin="0,12,0,8" />
+                    <TextBlock Text="화질 개선" FontWeight="SemiBold" />
+                    <TextBlock Text="바꾸면 재생 엔진을 다시 만들어 잠깐 끊겼다 이어집니다." Foreground="{StaticResource TextDim}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,4" />
+                    <DockPanel Margin="0,4,0,0">
+                        <TextBlock x:Name="SharpenValue" DockPanel.Dock="Right" Foreground="{StaticResource TextDim}" />
+                        <TextBlock Text="선명하게" />
+                    </DockPanel>
+                    <Slider x:Name="SharpenSlider" Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="5" ValueChanged="Quality_Changed" />
+                    <DockPanel Margin="0,8,0,0">
+                        <TextBlock x:Name="DenoiseValue" DockPanel.Dock="Right" Foreground="{StaticResource TextDim}" />
+                        <TextBlock Text="노이즈 줄이기" />
+                    </DockPanel>
+                    <Slider x:Name="DenoiseSlider" Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="5" ValueChanged="Quality_Changed" />
+                    <CheckBox x:Name="UpscaleCheck" Content="업스케일 (그래픽 카드 고화질 확대)" Margin="0,8,0,0" Checked="Quality_Changed" Unchecked="Quality_Changed"
+                              ToolTip="NVIDIA RTX · 최신 인텔 그래픽은 '슈퍼 해상도'로, 그 밖의 그래픽은 기본 확대 방식으로 키웁니다." />
+                    <Button Content="색·화질 원래대로" Style="{StaticResource TextButton}" HorizontalAlignment="Right" Margin="0,8,0,0" Click="AdjustReset_Click" />
                 </StackPanel>
             </Border>
         </Popup>

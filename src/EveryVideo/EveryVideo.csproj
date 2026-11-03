@@ -35,6 +35,8 @@
     <PackageReference Include="LibVLCSharp.WPF" Version="3.9.1" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
     <PackageReference Include="FluentFTP" Version="52.0.0" />
+    <!-- AI 컬러화 / 업스케일 (기기 안에서 실행, 모델은 처음 쓸 때 내려받음) -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.22.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -19,7 +19,7 @@ public static class VlcEngine
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EveryVideo", "plugins.ver");
     private static string LegacyStampPath => Path.Combine(PluginDir, "plugins.ver");
 
-    public static Task<LibVLC> CreateAsync(bool hardwareDecoding) => Task.Run(() =>
+    public static Task<LibVLC> CreateAsync(bool hardwareDecoding, IEnumerable<string>? extra = null) => Task.Run(() =>
     {
         var sw = Stopwatch.StartNew();
         Core.Initialize();
@@ -31,6 +31,7 @@ public static class VlcEngine
             "--network-caching=1500",
             hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
         };
+        if (extra != null) args.AddRange(extra);
         var stamp = Stamp();
         var rebuild = stamp != null && !CacheIsCurrent(stamp);
         if (rebuild) args.Add("--reset-plugins-cache");

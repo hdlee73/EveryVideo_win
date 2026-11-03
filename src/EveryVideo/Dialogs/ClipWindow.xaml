@@ -70,6 +70,12 @@
         <TextBlock x:Name="DeleteNote" Visibility="Collapsed" TextWrapping="Wrap" Foreground="{StaticResource TextDim}" Margin="0,10,0,0"
                    Text="이 구간을 뺀 나머지를 새 파일로 저장합니다. 원본 파일은 그대로 둡니다." />
 
+        <StackPanel x:Name="EnhancePanel" Margin="0,10,0,0">
+            <CheckBox x:Name="QualityCheck" Content="화질 개선 적용" IsChecked="True" Visibility="Collapsed" />
+            <CheckBox x:Name="AiColorCheck" Content="AI 컬러화 (흑백 → 컬러, 오래 걸림)" Margin="0,6,0,0" Checked="AiColor_Changed" Unchecked="AiColor_Changed" />
+            <TextBlock x:Name="AiNote" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11.5" Foreground="{StaticResource TextDim}" Margin="0,4,0,0" />
+        </StackPanel>
+
         <TextBlock Text="파일 이름" Style="{StaticResource Label}" />
         <TextBox x:Name="NameBox" />
         <DockPanel Margin="0,6,0,0">

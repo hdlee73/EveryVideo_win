@@ -136,9 +136,10 @@ public static partial class Ffmpeg
     /// 구간을 잘라 저장한다. 빠르게(원본 그대로 옮겨 담기) → 다시 인코딩 → 소리 빼고 순으로 시도한다.
     /// </summary>
     public static async Task CutAsync(string input, long startMs, long endMs, string output, bool accurate,
-        bool withAudio, IProgress<double>? progress, CancellationToken ct)
+        bool withAudio, IProgress<double>? progress, CancellationToken ct, string? videoFilter = null)
     {
         var dur = endMs - startMs;
+        if (videoFilter != null) accurate = true;
         if (dur <= 0) throw new ArgumentException("끝 시간이 시작 시간보다 뒤여야 합니다.");
 
         IEnumerable<string> Args(string mode)
@@ -149,8 +150,11 @@ public static partial class Ffmpeg
             if (mode == "copy")
                 a.AddRange(new[] { "-c", "copy", "-avoid_negative_ts", "make_zero" });
             else
+            {
+                if (videoFilter != null) a.AddRange(new[] { "-vf", videoFilter });
                 a.AddRange(new[] { "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "192k" });
+            }
             a.AddRange(new[] { "-sn", "-dn", "-movflags", "+faststart", output });
             return a;
         }
@@ -303,13 +307,13 @@ public static partial class Ffmpeg
     /// 여러 구간을 이어서 하나의 MP4 로 저장한다 (다시 인코딩). 구간 삭제는 남길 구간들을 넘겨 쓴다.
     /// </summary>
     public static async Task KeepSegmentsAsync(string input, IReadOnlyList<(long start, long end)> keep, string output,
-        IProgress<double>? progress, CancellationToken ct)
+        IProgress<double>? progress, CancellationToken ct, string? videoFilter = null)
     {
         keep = keep.Where(k => k.end - k.start >= 100).OrderBy(k => k.start).ToList();
         if (keep.Count == 0) throw new ArgumentException("남길 구간이 없습니다.");
         if (keep.Count == 1)
         {
-            await CutAsync(input, keep[0].start, keep[0].end, output, true, true, progress, ct);
+            await CutAsync(input, keep[0].start, keep[0].end, output, true, true, progress, ct, videoFilter);
             return;
         }
         var probe = await ProbeAsync(input, ct);
@@ -323,7 +327,8 @@ public static partial class Ffmpeg
             if (probe.HasAudio) filter.Append($"[0:a:0]atrim={range},asetpts=PTS-STARTPTS[a{i}];");
             pairs.Append(probe.HasAudio ? $"[v{i}][a{i}]" : $"[v{i}]");
         }
-        filter.Append($"{pairs}concat=n={keep.Count}:v=1:a={(probe.HasAudio ? 1 : 0)}[v]{(probe.HasAudio ? "[a]" : "")}");
+        filter.Append($"{pairs}concat=n={keep.Count}:v=1:a={(probe.HasAudio ? 1 : 0)}{(videoFilter != null ? "[vc]" : "[v]")}{(probe.HasAudio ? "[a]" : "")}");
+        if (videoFilter != null) filter.Append($";[vc]{videoFilter}[v]");
         var args = new List<string> { "-y", "-i", input, "-filter_complex", filter.ToString(), "-map", "[v]" };
         if (probe.HasAudio) args.AddRange(new[] { "-map", "[a]", "-c:a", "aac", "-b:a", "192k" });
         args.AddRange(new[] { "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",

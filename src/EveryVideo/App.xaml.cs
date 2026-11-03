@@ -43,6 +43,9 @@ public partial class App : Application
             _ = new Dialogs.RecorderWindow();
             _ = new Dialogs.LinksWindow(new[] { Services.WebMedia.LinkOf("https://example.com/a.mp4") }, "https://example.com", true);
             if (!Ffmpeg.Available) throw new InvalidOperationException("ffmpeg.exe not found");
+            // AI 엔진(ONNX Runtime) 네이티브 DLL 이 함께 배포됐는지
+            using (new Microsoft.ML.OnnxRuntime.SessionOptions()) { }
+            _ = Services.Quality.VlcArgs(new Services.Settings { Sharpen = 50, Denoise = 50, Upscale = true });
             Log.Write("selftest ok", null, $"v{AppInfo.Version} ({AppInfo.BuildDate}) ffmpeg={Ffmpeg.ExePath}");
             return true;
         }

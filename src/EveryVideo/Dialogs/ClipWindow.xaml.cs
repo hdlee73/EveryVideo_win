@@ -28,6 +28,7 @@ public partial class ClipWindow : CardWindow
             Title = "GIF 만들기";
             ClipPanel.Visibility = Visibility.Collapsed;
             GifPanel.Visibility = Visibility.Visible;
+            EnhancePanel.Visibility = Visibility.Collapsed;
         }
         else if (mode == ClipMode.Delete)
         {
@@ -49,6 +50,11 @@ public partial class ClipWindow : CardWindow
         var tag = mode == ClipMode.Delete ? "_구간삭제" : "_" + TimeFormat.Format(startMs).Replace(':', '-');
         NameBox.Text = $"{baseName}{tag}{ext}";
         FolderText.Text = _folder;
+        if (!Quality.IsOff(Settings.Current))
+        {
+            QualityCheck.Visibility = Visibility.Visible;
+            QualityCheck.Content = "화질 개선 적용 (" + Quality.Label(Settings.Current) + ")";
+        }
         StartBox.TextChanged += (_, _) => UpdateLength();
         EndBox.TextChanged += (_, _) => UpdateLength();
         UpdateLength();
@@ -66,6 +72,15 @@ public partial class ClipWindow : CardWindow
             LengthText.Text = $"길이 {TimeFormat.Format(e - s, true)}";
         else
             LengthText.Text = "시간 형식: 분:초 (예: 01:23.5) 또는 시:분:초";
+    }
+
+    private void AiColor_Changed(object sender, RoutedEventArgs e)
+    {
+        if (AiNote == null) return;
+        var on = AiColorCheck.IsChecked == true;
+        AiNote.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        AiNote.Text = "AI 가 밝기를 보고 색을 추정합니다(실제 색과 다를 수 있어요). 프레임마다 처리해 1분 영상에 수 분 걸릴 수 있어요."
+            + (ModelStore.IsReady(AiModel.Colorize) ? "" : $" 처음 한 번 AI 모델(약 {ModelStore.Info(AiModel.Colorize).sizeMb}MB)을 내려받습니다.");
     }
 
     private void StartNow_Click(object sender, RoutedEventArgs e) => StartBox.Text = TimeFormat.Format(_now(), true);
@@ -105,6 +120,25 @@ public partial class ClipWindow : CardWindow
         try
         {
             var progress = new Progress<double>(p => Progress.Value = p);
+            var aiColor = _mode != ClipMode.Gif && AiColorCheck.IsChecked == true;
+            string? vf = null;
+            if (_mode != ClipMode.Gif && QualityCheck.Visibility == Visibility.Visible && QualityCheck.IsChecked == true)
+            {
+                var probe = await Ffmpeg.ProbeAsync(_source, _cts.Token);
+                vf = Quality.FfmpegFilter(Settings.Current, probe.Width, probe.Height);
+            }
+            if (aiColor)
+            {
+                if (!ModelStore.IsReady(AiModel.Colorize))
+                {
+                    StatusText.Text = "AI 컬러화 모델을 내려받는 중… (처음 한 번)";
+                    await ModelStore.DownloadAsync(AiModel.Colorize, progress, _cts.Token);
+                }
+                Progress.Value = 0;
+                StatusText.Text = "1/2 구간을 잘라내는 중…";
+            }
+            var finalOutput = output;
+            if (aiColor) output = Path.Combine(Path.GetTempPath(), $"everyvideo_ai_{Guid.NewGuid():N}.mp4");
             switch (_mode)
             {
                 case ClipMode.Gif:
@@ -114,12 +148,26 @@ public partial class ClipWindow : CardWindow
                     break;
                 case ClipMode.Delete:
                     if (_length <= 0) throw new InvalidOperationException("영상 길이를 알 수 없습니다.");
-                    await Ffmpeg.KeepSegmentsAsync(_source, Ffmpeg.Complement(new[] { (start, end) }, _length), output, progress, _cts.Token);
+                    await Ffmpeg.KeepSegmentsAsync(_source, Ffmpeg.Complement(new[] { (start, end) }, _length), output, progress, _cts.Token, vf);
                     break;
                 default:
-                    await Ffmpeg.CutAsync(_source, start, end, output, AccurateRadio.IsChecked == true, AudioCheck.IsChecked == true,
-                        progress, _cts.Token);
+                    await Ffmpeg.CutAsync(_source, start, end, output, AccurateRadio.IsChecked == true || vf != null || aiColor,
+                        AudioCheck.IsChecked == true, progress, _cts.Token, vf);
                     break;
+            }
+            if (aiColor)
+            {
+                StatusText.Text = "2/2 AI 컬러화하는 중… (기기 안에서 처리)";
+                Progress.Value = 0;
+                try
+                {
+                    await AiVideo.ColorizeAsync(output, finalOutput, progress, _cts.Token);
+                }
+                finally
+                {
+                    Ffmpeg.TryDelete(output);
+                }
+                output = finalOutput;
             }
             SavedPath = output;
             _cts = null;

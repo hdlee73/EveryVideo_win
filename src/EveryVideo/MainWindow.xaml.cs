@@ -150,6 +150,7 @@ public partial class MainWindow : Window
         BrightnessSlider.Value = _settings.Brightness;
         ContrastSlider.Value = _settings.Contrast;
         SaturationSlider.Value = _settings.Saturation;
+        SyncQualityControls();
         UpdateRepeatButton();
         UpdateMuteButton();
 
@@ -181,33 +182,9 @@ public partial class MainWindow : Window
         // 창을 먼저 보여 주고, 재생 엔진은 뒤에서 준비한다.
         try
         {
-            _vlc = await VlcEngine.CreateAsync(_settings.HardwareDecoding);
+            _vlc = await VlcEngine.CreateAsync(_settings.HardwareDecoding, Quality.VlcArgs(_settings));
             if (_closing) return;
-            _mp = new MediaPlayer(_vlc)
-            {
-                EnableHardwareDecoding = _settings.HardwareDecoding,
-                EnableKeyInput = false,
-                EnableMouseInput = false,
-            };
-            // libvlc 이벤트 안에서 바로 재생을 다시 시작하지 않도록 잠깐 뒤에 처리한다.
-            _mp.EndReached += (_, _) => Task.Delay(60).ContinueWith(_ => Dispatcher.BeginInvoke(OnEnded));
-            _mp.EncounteredError += (_, _) => Task.Delay(60).ContinueWith(_ => Dispatcher.BeginInvoke(OnError));
-            _mp.Vout += (_, _) => Dispatcher.BeginInvoke(() =>
-            {
-                ApplyAdjust();
-                ApplyZoom();
-                if (_settings.Brightness != 0 && !_osdTimer.IsEnabled)
-                    ShowOsd($"밝기 {Signed(_settings.Brightness)} 적용 중 (밝기 버튼에서 되돌리기)", 2);
-            });
-            _mp.Playing += (_, _) => Dispatcher.BeginInvoke(() =>
-            {
-                _mp?.SetRate(_rate);
-                if (_mp == null) return;
-                Log.Write("playing", null, CurrentItem?.Name);
-                _mp.Volume = (int)VolumeSlider.Value;
-                _mp.Mute = _settings.Muted;
-            });
-            VideoView.MediaPlayer = _mp;
+            CreatePlayer();
         }
         catch (Exception ex)
         {
@@ -226,6 +203,80 @@ public partial class MainWindow : Window
         if (_pendingPlay is { } pending && pending < _playlist.Count) PlayAt(pending);
         _pendingPlay = null;
         _ = CheckUpdateAtStartupAsync();
+    }
+
+    /// <summary>재생기(MediaPlayer)를 만들고 이벤트를 연결해 화면에 붙인다.</summary>
+    private void CreatePlayer()
+    {
+        _mp = new MediaPlayer(_vlc!)
+        {
+            EnableHardwareDecoding = _settings.HardwareDecoding,
+            EnableKeyInput = false,
+            EnableMouseInput = false,
+        };
+        // libvlc 이벤트 안에서 바로 재생을 다시 시작하지 않도록 잠깐 뒤에 처리한다.
+        _mp.EndReached += (_, _) => Task.Delay(60).ContinueWith(_ => Dispatcher.BeginInvoke(OnEnded));
+        _mp.EncounteredError += (_, _) => Task.Delay(60).ContinueWith(_ => Dispatcher.BeginInvoke(OnError));
+        _mp.Vout += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            ApplyAdjust();
+            ApplyZoom();
+            if (_settings.Brightness != 0 && !_osdTimer.IsEnabled)
+                ShowOsd($"밝기 {Signed(_settings.Brightness)} 적용 중 (밝기 버튼에서 되돌리기)", 2);
+        });
+        _mp.Playing += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            _mp?.SetRate(_rate);
+            if (_mp == null) return;
+            Log.Write("playing", null, CurrentItem?.Name);
+            _mp.Volume = (int)VolumeSlider.Value;
+            _mp.Mute = _settings.Muted;
+        });
+        VideoView.MediaPlayer = _mp;
+    }
+
+    private bool _restarting;
+
+    /// <summary>
+    /// 화질 개선 필터는 재생 엔진을 만들 때만 정할 수 있어, 바꾸면 엔진을 새로 만들고 보던 곳부터 다시 재생한다.
+    /// </summary>
+    private async Task RestartEngineAsync()
+    {
+        if (_vlc == null || _restarting || _closing) return;
+        _restarting = true;
+        try
+        {
+            var index = _current;
+            var pos = _mp?.Time ?? 0;
+            var wasPlaying = _mp?.IsPlaying ?? false;
+            var oldMp = _mp;
+            var oldVlc = _vlc;
+            _mp = null;
+            try { VideoView.MediaPlayer = null; } catch { }
+            _ = Task.Run(() =>
+            {
+                try { oldMp?.Stop(); oldMp?.Dispose(); oldVlc.Dispose(); }
+                catch (Exception ex) { Log.Write("engine restart cleanup", ex); }
+            });
+            _vlc = await VlcEngine.CreateAsync(_settings.HardwareDecoding, Quality.VlcArgs(_settings));
+            if (_closing) return;
+            CreatePlayer();
+            if (index >= 0 && index < _playlist.Count)
+            {
+                PlayAt(index, pos);
+                if (!wasPlaying) _ = Task.Delay(400).ContinueWith(_ => Dispatcher.BeginInvoke(() => _mp?.SetPause(true)));
+            }
+            ShowOsd("화질: " + Quality.Label(_settings), 2);
+        }
+        catch (Exception ex)
+        {
+            Log.Write("engine restart", ex);
+            ShowOsd("화질 설정을 적용하지 못했습니다: " + ex.Message, 3);
+        }
+        finally
+        {
+            _restarting = false;
+        }
     }
 
     /// <summary>동영상 창의 빈 곳이 하얗게 보이지 않게 검게 칠한다.</summary>
@@ -1367,6 +1418,71 @@ public partial class MainWindow : Window
     private void AdjustReset_Click(object sender, RoutedEventArgs e)
     {
         BrightnessSlider.Value = ContrastSlider.Value = SaturationSlider.Value = 0;
+        var changed = !Quality.IsOff(_settings);
+        _syncingQuality = true;
+        SharpenSlider.Value = DenoiseSlider.Value = 0;
+        UpscaleCheck.IsChecked = false;
+        _syncingQuality = false;
+        _settings.Sharpen = _settings.Denoise = 0;
+        _settings.Upscale = false;
+        UpdateQualityLabels();
+        if (changed) { _settings.Save(); _qualityTimer.Stop(); _ = RestartEngineAsync(); }
+    }
+
+    // ---- 화질 개선 (선명하게 · 노이즈 줄이기 · 업스케일) ----
+
+    private bool _syncingQuality;
+    private DispatcherTimer? _qualityTimerField;
+
+    /// <summary>슬라이더를 움직이는 동안은 기다렸다가, 멈추면 한 번만 엔진을 다시 만든다.</summary>
+    private DispatcherTimer _qualityTimer
+    {
+        get
+        {
+            if (_qualityTimerField == null)
+            {
+                _qualityTimerField = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                _qualityTimerField.Tick += (_, _) =>
+                {
+                    _qualityTimerField.Stop();
+                    _settings.Save();
+                    _ = RestartEngineAsync();
+                };
+            }
+            return _qualityTimerField;
+        }
+    }
+
+    private void SyncQualityControls()
+    {
+        _syncingQuality = true;
+        SharpenSlider.Value = _settings.Sharpen;
+        DenoiseSlider.Value = _settings.Denoise;
+        UpscaleCheck.IsChecked = _settings.Upscale;
+        _syncingQuality = false;
+        UpdateQualityLabels();
+    }
+
+    private void UpdateQualityLabels()
+    {
+        if (SharpenValue == null || DenoiseValue == null) return;
+        SharpenValue.Text = _settings.Sharpen > 0 ? _settings.Sharpen.ToString() : "끔";
+        DenoiseValue.Text = _settings.Denoise > 0 ? _settings.Denoise.ToString() : "끔";
+    }
+
+    private void Quality_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingQuality || SharpenSlider == null || DenoiseSlider == null || UpscaleCheck == null) return;
+        var sharpen = (int)SharpenSlider.Value;
+        var denoise = (int)DenoiseSlider.Value;
+        var upscale = UpscaleCheck.IsChecked == true;
+        if (sharpen == _settings.Sharpen && denoise == _settings.Denoise && upscale == _settings.Upscale) return;
+        _settings.Sharpen = sharpen;
+        _settings.Denoise = denoise;
+        _settings.Upscale = upscale;
+        UpdateQualityLabels();
+        _qualityTimer.Stop();
+        _qualityTimer.Start();
     }
 
     /// <summary>
@@ -1752,6 +1868,90 @@ public partial class MainWindow : Window
                 }
             });
         });
+    }
+
+    /// <summary>지금 장면을 원래 해상도로 캡쳐해 AI 컬러화 · 4배 업스케일한 뒤 저장한다.</summary>
+    private async void AiCapture_Click(object sender, RoutedEventArgs e)
+    {
+        if (_mp == null || CurrentItem == null || !_mp.WillPlay) return;
+        var wasPlaying = _mp.IsPlaying;
+        _mp.SetPause(true);
+        var pick = CardDialog.Show("AI 캡쳐",
+            "지금 장면을 기기 안의 AI 로 처리해 저장합니다.\n• 컬러화: 흑백 장면에 색을 추정해 입힙니다 (실제 색과 다를 수 있어요)\n• 업스케일: 원래 해상도의 4배로 키웁니다 (수십 초 걸릴 수 있어요)\n\n처음 한 번은 AI 모델을 내려받습니다.",
+            MessageKind.Info, "컬러화", "4배 업스케일", "둘 다", "취소");
+        if (pick < 0 || pick > 2)
+        {
+            if (wasPlaying) _mp?.SetPause(false);
+            return;
+        }
+        var colorize = pick == 0 || pick == 2;
+        var upscale = pick == 1 || pick == 2;
+        var name = Path.GetFileNameWithoutExtension(CurrentItem.Name);
+        foreach (var c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
+        if (name.Length > 60) name = name[..60];
+        var tag = colorize && upscale ? "AI컬러_x4" : colorize ? "AI컬러" : "x4";
+        var output = Path.Combine(_settings.CaptureDir, $"{name}_{TimeFormat.Format(_mp.Time).Replace(':', '-')}_{tag}_{DateTime.Now:HHmmssfff}.png");
+        var snap = Path.Combine(Path.GetTempPath(), $"everyvideo_snap_{Guid.NewGuid():N}.png");
+        if (!_mp.TakeSnapshot(0, snap, 0, 0))
+        {
+            ShowOsd("캡쳐하지 못했습니다");
+            return;
+        }
+        for (var i = 0; i < 30 && !File.Exists(snap); i++) await Task.Delay(100);
+        await Task.Delay(150);
+        if (!File.Exists(snap)) { ShowOsd("캡쳐하지 못했습니다"); return; }
+
+        var ok = ProgressWindow.Run("AI 캡쳐", "기기 안에서 처리하는 중…", async (progress, ct) =>
+        {
+            if (colorize && !ModelStore.IsReady(AiModel.Colorize)) await ModelStore.DownloadAsync(AiModel.Colorize, progress, ct);
+            if (upscale && !ModelStore.IsReady(AiModel.Upscale)) await ModelStore.DownloadAsync(AiModel.Upscale, progress, ct);
+            progress.Report(0);
+            var frame = LoadFrame(snap, upscale ? Upscaler.MaxInput : int.MaxValue);
+            frame = await Task.Run(() =>
+            {
+                var f = frame;
+                if (colorize)
+                {
+                    using var col = new Colorizer();
+                    col.Colorize(f);
+                }
+                if (upscale)
+                {
+                    using var up = new Upscaler();
+                    f = up.Upscale(f, progress, ct);
+                }
+                return f;
+            }, ct);
+            var bmp = BitmapSource.Create(frame.Width, frame.Height, 96, 96, PixelFormats.Bgra32, null, frame.Data, frame.Width * 4);
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(bmp));
+            using (var fs = File.Create(output)) enc.Save(fs);
+            try { Clipboard.SetImage(bmp); } catch { }
+        });
+        Ffmpeg.TryDelete(snap);
+        if (ok) ShowOsd($"AI 캡쳐 저장: {Path.GetFileName(output)} (클립보드에도 복사)", 3);
+        if (wasPlaying) _mp?.SetPause(false);
+    }
+
+    /// <summary>그림 파일을 BGRA 화소로 읽는다. 긴 변이 maxSide 보다 크면 줄인다.</summary>
+    private static PixelFrame LoadFrame(string path, int maxSide)
+    {
+        var img = new BitmapImage();
+        img.BeginInit();
+        img.CacheOption = BitmapCacheOption.OnLoad;
+        img.UriSource = new Uri(path);
+        img.EndInit();
+        BitmapSource src = img;
+        var longest = Math.Max(src.PixelWidth, src.PixelHeight);
+        if (longest > maxSide)
+        {
+            var k = maxSide / (double)longest;
+            src = new TransformedBitmap(src, new ScaleTransform(k, k));
+        }
+        var conv = new FormatConvertedBitmap(src, PixelFormats.Bgra32, null, 0);
+        var f = new PixelFrame(conv.PixelWidth, conv.PixelHeight, 4, true);
+        conv.CopyPixels(f.Data, conv.PixelWidth * 4, 0);
+        return f;
     }
 
     private void Clip_Click(object sender, RoutedEventArgs e)

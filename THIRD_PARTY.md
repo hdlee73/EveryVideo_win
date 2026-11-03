@@ -7,3 +7,10 @@
 | [FluentFTP](https://github.com/robinrodricks/FluentFTP) | FTP 폴더 탐색 | MIT |
 | [.NET](https://github.com/dotnet/runtime) / WPF | 앱 실행 환경 | MIT |
 | [Material Icons](https://fonts.google.com/icons) | 아이콘 | Apache 2.0 |
+
+## ONNX Runtime (MIT)
+AI 컬러화 · 업스케일 실행 엔진. https://github.com/microsoft/onnxruntime
+
+## AI 모델 (처음 쓸 때 내려받음)
+- 컬러화: Zhang et al., "Real-Time User-Guided Image Colorization with Learned Deep Priors" (SIGGRAPH 2017), github.com/richzhang/colorization — BSD 2-Clause
+- 업스케일: Real-ESRGAN realesr-general-x4v3, github.com/xinntao/Real-ESRGAN — BSD 3-Clause

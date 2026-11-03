@@ -46,6 +46,10 @@ public sealed class Settings
     public int Brightness { get; set; }
     public int Contrast { get; set; }
     public int Saturation { get; set; }
+    /// <summary>화질 개선: 선명하게 · 노이즈 줄이기 (0~100, 0 = 끔), 업스케일(그래픽 카드 고화질 확대).</summary>
+    public int Sharpen { get; set; }
+    public int Denoise { get; set; }
+    public bool Upscale { get; set; }
     public RepeatMode Repeat { get; set; } = RepeatMode.All;
     public bool ShowSidePanel { get; set; } = true;
     public double SidePanelWidth { get; set; } = 300;
