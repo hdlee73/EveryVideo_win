@@ -38,7 +38,10 @@ public static class AppInfo
 
     public static void OpenUrl(string url)
     {
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var u) ||
+            (u.Scheme != Uri.UriSchemeHttps && u.Scheme != "mailto"))
+            return;
+        try { Process.Start(new ProcessStartInfo(u.AbsoluteUri) { UseShellExecute = true }); }
         catch (Exception e) { Log.Write("open url", e, url); }
     }
 }

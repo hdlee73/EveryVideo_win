@@ -89,11 +89,17 @@ public partial class ClipWindow : CardWindow
             return;
         }
         if (_length > 0) end = Math.Min(end, _length);
-        var name = NameBox.Text.Trim();
+        var name = Path.GetFileName(NameBox.Text.Trim());
         var ext = _mode == ClipMode.Gif ? ".gif" : ".mp4";
-        if (name.Length == 0) name = "clip" + ext;
+        if (string.IsNullOrWhiteSpace(name)) name = "clip" + ext;
         if (!name.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) name += ext;
-        var output = Path.Combine(_folder, name);
+        var baseDir = Path.GetFullPath(_folder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var output = Path.GetFullPath(Path.Combine(baseDir, name));
+        if (!output.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase))
+        {
+            StatusText.Text = "올바른 파일 이름을 입력해 주세요.";
+            return;
+        }
         if (File.Exists(output) && !CardDialog.Confirm("구간 저장", "같은 이름의 파일이 있습니다. 덮어쓸까요?", "덮어쓰기"))
             return;
 

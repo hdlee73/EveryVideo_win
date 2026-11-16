@@ -427,9 +427,9 @@ public static partial class Ffmpeg
     /// <summary>필터 안에 쓰는 경로: 역슬래시는 / 로, : 는 \: 로</summary>
     private static string FilterPath(string path) => path.Replace('\\', '/').Replace(":", "\\:").Replace("'", "\\'");
 
-    /// <summary>concat demuxer list.txt용 경로: / 로 통일하고 ' 는 '\'' 로 이스케이프</summary>
+    /// <summary>concat demuxer list.txt용 경로: / 로 통일하고 ' 는 '\'' 로 이스케이프 (줄바꿈 제거)</summary>
     private static string EscapeConcatPath(string path) =>
-        path.Replace('\\', '/').Replace("'", "'\\''");
+        path.Replace("\r", "").Replace("\n", "").Replace('\\', '/').Replace("'", "'\\''");
 
     /// <summary>지정 시점의 작은 그림(JPEG)을 만든다. 탐색 미리보기용.</summary>
     public static async Task<byte[]?> FrameAsync(string input, long ms, int width, CancellationToken ct)

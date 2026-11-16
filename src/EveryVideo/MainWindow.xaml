@@ -12,8 +12,9 @@
             <RowDefinition />
         </Grid.RowDefinitions>
 
-        <!-- 위: 이름 + 메뉴 -->
-        <Border x:Name="TopMenu" Background="{StaticResource PanelBg}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+        <!-- 위: 이름 + 메뉴 + 스튜디오 빠른 작업 막대 -->
+        <StackPanel x:Name="TopMenu" Grid.Row="0" Background="{StaticResource PanelBg}">
+        <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
             <DockPanel Height="40">
                 <TextBlock Text="EveryVideo" FontSize="15" FontWeight="Bold" Foreground="{StaticResource Brand}" VerticalAlignment="Center" Margin="16,0,10,0" />
                 <TextBlock x:Name="TitleText" DockPanel.Dock="Right" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,16,0"
@@ -91,6 +92,43 @@
                 </Menu>
             </DockPanel>
         </Border>
+        <Border Background="{StaticResource PanelBg}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="10,4">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource TextButton}" MinWidth="0" Height="28" Padding="10,0" Foreground="{StaticResource Text}" Click="OpenFiles_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IcOpen}" Fill="{StaticResource BrandLight}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" />
+                        <TextBlock Text="파일 열기" VerticalAlignment="Center" FontSize="12.5" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource TextButton}" MinWidth="0" Height="28" Padding="10,0" Foreground="{StaticResource Text}" Click="Remote_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IcServer}" Fill="{StaticResource BrandLight}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" />
+                        <TextBlock Text="네트워크 (FTP · SMB)" VerticalAlignment="Center" FontSize="12.5" />
+                    </StackPanel>
+                </Button>
+                <Border Width="1" Height="14" Background="{StaticResource Line}" Margin="6,0" VerticalAlignment="Center" />
+                <Button Style="{StaticResource TextButton}" MinWidth="0" Height="28" Padding="10,0" Foreground="{StaticResource Text}" Click="Clip_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IcCut}" Fill="{StaticResource Accent}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" />
+                        <TextBlock Text="구간 저장" VerticalAlignment="Center" FontSize="12.5" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource TextButton}" MinWidth="0" Height="28" Padding="10,0" Foreground="{StaticResource Text}" Click="Concat_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IcMerge}" Fill="{StaticResource TextDim}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" />
+                        <TextBlock Text="이어붙이기" VerticalAlignment="Center" FontSize="12.5" />
+                    </StackPanel>
+                </Button>
+                <Border Width="1" Height="14" Background="{StaticResource Line}" Margin="6,0" VerticalAlignment="Center" />
+                <Button Style="{StaticResource TextButton}" MinWidth="0" Height="28" Padding="10,0" Foreground="{StaticResource Text}" Click="Record_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" Fill="{StaticResource Danger}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="화면 녹화" VerticalAlignment="Center" FontSize="12.5" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+        </StackPanel>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -215,7 +253,7 @@
                             </Border>
 
                             <!-- 전체화면일 때 조작 막대가 여기로 옮겨진다 -->
-                            <Border x:Name="FsControlsHost" VerticalAlignment="Bottom" Background="#F2EEF0F3" Visibility="Collapsed" />
+                            <Border x:Name="FsControlsHost" VerticalAlignment="Bottom" Background="#EB0C0E13" Visibility="Collapsed" />
                         </Grid>
                     </vlc:VideoView>
                 </Border>
@@ -367,6 +405,7 @@
                 </DockPanel>
             </Border>
         </Grid>
+
 
         <!-- 탐색 미리보기 -->
         <Popup x:Name="PreviewPopup" PlacementTarget="{Binding ElementName=SeekSlider}" Placement="Relative"

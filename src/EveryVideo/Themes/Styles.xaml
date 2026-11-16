@@ -2,23 +2,23 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EveryVideo">
 
-    <!-- 색: 밝은 작업 도구형 테마 (화면 틀은 밝게, 동영상만 어둡게) -->
-    <Color x:Key="BrandColor">#FF2D7FF9</Color>
+    <!-- 색 (Stitch Cinema Studio 통합 팔레트) -->
+    <Color x:Key="BrandColor">#FF4D8EFF</Color>
     <SolidColorBrush x:Key="Brand" Color="{StaticResource BrandColor}" />
-    <SolidColorBrush x:Key="BrandLight" Color="#FF5C9BFF" />
-    <SolidColorBrush x:Key="Accent" Color="#FFFFB020" />
+    <SolidColorBrush x:Key="BrandLight" Color="#FFADC6FF" />
+    <SolidColorBrush x:Key="Accent" Color="#FFFFB95F" />
     <SolidColorBrush x:Key="Danger" Color="#FFE5484D" />
-    <SolidColorBrush x:Key="WindowBg" Color="#FFEEF0F3" />
-    <SolidColorBrush x:Key="PanelBg" Color="#FFFFFFFF" />
-    <SolidColorBrush x:Key="CardBg" Color="#FFFFFFFF" />
-    <SolidColorBrush x:Key="CardHigh" Color="#FFF1F3F6" />
-    <SolidColorBrush x:Key="BrandSoft" Color="#FFE8F0FE" />
-    <SolidColorBrush x:Key="AccentSoft" Color="#FFFFF8EA" />
-    <SolidColorBrush x:Key="RowHover" Color="#0F1D2430" />
-    <SolidColorBrush x:Key="RowSelected" Color="#FFE8F0FE" />
-    <SolidColorBrush x:Key="Line" Color="#FFDDE1E7" />
-    <SolidColorBrush x:Key="Text" Color="#FF1D2430" />
-    <SolidColorBrush x:Key="TextDim" Color="#FF6B7686" />
+    <SolidColorBrush x:Key="WindowBg" Color="#FF0C0E13" />
+    <SolidColorBrush x:Key="PanelBg" Color="#FF111318" />
+    <SolidColorBrush x:Key="CardBg" Color="#FF1A1B21" />
+    <SolidColorBrush x:Key="CardHigh" Color="#FF282A2F" />
+    <SolidColorBrush x:Key="BrandSoft" Color="#294D8EFF" />
+    <SolidColorBrush x:Key="AccentSoft" Color="#29FFB95F" />
+    <SolidColorBrush x:Key="RowHover" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="RowSelected" Color="#334D8EFF" />
+    <SolidColorBrush x:Key="Line" Color="#29424754" />
+    <SolidColorBrush x:Key="Text" Color="#FFE2E2E9" />
+    <SolidColorBrush x:Key="TextDim" Color="#FFC2C6D6" />
 
     <FontFamily x:Key="UiFont">Malgun Gothic, Segoe UI</FontFamily>
 

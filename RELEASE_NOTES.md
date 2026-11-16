@@ -1,8 +1,13 @@
-EveryVideo for Windows v1.0.2
+EveryVideo for Windows v1.1.0
 
-FTP 한글 이름 깨짐 수정
+Cinema Studio 다크 UI 리뉴얼 · 새 앱 아이콘 · 보안 취약점 패치
 
 설치: `EveryVideo-x.y.z-setup.exe` 실행 / 설치 없이 쓰려면 `…-portable.zip` 을 풀어 `EveryVideo.exe` 실행
+
+v1.1.0 바뀐 점
+- **Cinema Studio 다크 테마 & 빠른 작업 막대**: 상단 빠른 작업 막대(파일 열기 · 네트워크 · 구간 저장 · 이어붙이기 · 화면 녹화) 추가 및 통합 다크 스튜디오 팔레트 적용
+- **새 앱 아이콘**: Neon Ribbon Play 디자인 적용
+- **보안 취약점 패치**: FTP/FTPS 인증서 검증 복원, Google Drive 링크 호스트 검증 강화, 로그 내 자격 증명 마스킹, 구간 저장 경로 탐색(Path Traversal) 차단, FFmpeg concat 입력 새니타이즈, 외부 URL 스킴(`https`/`mailto`) 제한
 
 v1.0.2 바뀐 점
 - 한국 NAS·공유기 FTP(CP949/EUC-KR 이름)에서 한글 폴더·파일 이름이 깨지던 문제 수정. 서버가 UTF-8 을 지원하면 UTF-8, 아니면 이름을 보고 자동으로 CP949 로 읽음
