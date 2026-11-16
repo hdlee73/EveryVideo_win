@@ -412,7 +412,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Log.Write("play", ex, item.Location);
+            Log.Write("play", ex, RemoteSources.Key(item.Location));
             ShowOsd("열 수 없습니다: " + ex.Message);
             return;
         }

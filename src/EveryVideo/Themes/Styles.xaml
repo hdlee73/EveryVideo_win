@@ -2,21 +2,21 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EveryVideo">
 
-    <!-- 색 (안드로이드 앱의 재생 화면 색과 맞춤) -->
-    <Color x:Key="BrandColor">#FF4F5BD5</Color>
+    <!-- 색 (Stitch Cinema Studio 통합 팔레트) -->
+    <Color x:Key="BrandColor">#FF4D8EFF</Color>
     <SolidColorBrush x:Key="Brand" Color="{StaticResource BrandColor}" />
-    <SolidColorBrush x:Key="BrandLight" Color="#FF8C94FF" />
-    <SolidColorBrush x:Key="Accent" Color="#FFFFB300" />
+    <SolidColorBrush x:Key="BrandLight" Color="#FFADC6FF" />
+    <SolidColorBrush x:Key="Accent" Color="#FFFFB95F" />
     <SolidColorBrush x:Key="Danger" Color="#FFE5484D" />
-    <SolidColorBrush x:Key="WindowBg" Color="#FF121218" />
-    <SolidColorBrush x:Key="PanelBg" Color="#FF181820" />
-    <SolidColorBrush x:Key="CardBg" Color="#FF202029" />
-    <SolidColorBrush x:Key="CardHigh" Color="#FF2A2A35" />
+    <SolidColorBrush x:Key="WindowBg" Color="#FF0C0E13" />
+    <SolidColorBrush x:Key="PanelBg" Color="#FF111318" />
+    <SolidColorBrush x:Key="CardBg" Color="#FF1A1B21" />
+    <SolidColorBrush x:Key="CardHigh" Color="#FF282A2F" />
     <SolidColorBrush x:Key="RowHover" Color="#1FFFFFFF" />
-    <SolidColorBrush x:Key="RowSelected" Color="#33FFFFFF" />
-    <SolidColorBrush x:Key="Line" Color="#22FFFFFF" />
-    <SolidColorBrush x:Key="Text" Color="#FFF2F2F5" />
-    <SolidColorBrush x:Key="TextDim" Color="#FFA6A6B3" />
+    <SolidColorBrush x:Key="RowSelected" Color="#334D8EFF" />
+    <SolidColorBrush x:Key="Line" Color="#29424754" />
+    <SolidColorBrush x:Key="Text" Color="#FFE2E2E9" />
+    <SolidColorBrush x:Key="TextDim" Color="#FFC2C6D6" />
 
     <FontFamily x:Key="UiFont">Malgun Gothic, Segoe UI</FontFamily>
 

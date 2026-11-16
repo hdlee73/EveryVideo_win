@@ -35,8 +35,14 @@ public static class RemoteSources
 
     // ---------- 구글 드라이브 ----------
 
-    public static bool IsDriveLink(string text) =>
-        text.Contains("drive.google.com") || text.Contains("docs.google.com") || text.Contains("drive.usercontent.google.com");
+    public static bool IsDriveLink(string text)
+    {
+        if (!Uri.TryCreate(text.Trim(), UriKind.Absolute, out var u)) return false;
+        var h = u.Host;
+        return h.Equals("drive.google.com", StringComparison.OrdinalIgnoreCase)
+               || h.Equals("docs.google.com", StringComparison.OrdinalIgnoreCase)
+               || h.Equals("drive.usercontent.google.com", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>공유 링크에서 파일 ID 를 뽑아 바로 스트리밍할 수 있는 주소로 바꾼다.</summary>
     public static string? DriveDirectUrl(string link)
@@ -142,7 +148,6 @@ public static class RemoteSources
             string.IsNullOrEmpty(s.User) ? "anonymous@" : s.Password,
             s.Port > 0 ? s.Port : 21);
         client.Config.EncryptionMode = FtpEncryptionMode.Auto;
-        client.Config.ValidateAnyCertificate = true;
         client.Config.ConnectTimeout = 10000;
         await client.AutoConnect(ct);
         var items = await client.GetListing(string.IsNullOrEmpty(path) ? "/" : path, ct);
